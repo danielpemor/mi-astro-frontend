@@ -1,0 +1,51 @@
+---
+// src/components/Gallery.astro
+import { getGalleryImages, getAssetUrl } from '../lib/directus';
+
+const images = await getGalleryImages();
+---
+
+<section class="py-20 bg-gray-50">
+  <div class="container mx-auto px-4">
+    <h2 class="text-3xl md:text-4xl font-bold text-center mb-12">Nuestra Galería</h2>
+    
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      {images.map((image, index) => (
+        <div class={`gallery-item overflow-hidden rounded-lg shadow-md ${
+          index === 0 ? 'col-span-2 row-span-2' : ''
+        }`}>
+          <img 
+            src={getAssetUrl(image.image)} 
+            alt={image.alt_text || 'Imagen de galería'} 
+            class="w-full h-full object-cover transition-transform hover:scale-110 duration-500"
+          />
+        </div>
+      ))}
+      
+      {/* Imágenes de respaldo si no hay suficientes en Directus */}
+      {images.length < 5 && Array.from({ length: 5 - images.length }).map((_, i) => (
+        <div class="gallery-item overflow-hidden rounded-lg shadow-md">
+          <img 
+            src={`/gallery-${i + 1}.jpg`} 
+            alt="Imagen de galería" 
+            class="w-full h-full object-cover transition-transform hover:scale-110 duration-500"
+          />
+        </div>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .gallery-item {
+    aspect-ratio: 1 / 1;
+    height: 100%;
+  }
+  
+  @media (min-width: 768px) {
+    .gallery-item:first-child {
+      grid-row: span 2;
+      grid-column: span 2;
+    }
+  }
+</style>

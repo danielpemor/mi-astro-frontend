@@ -1,0 +1,233 @@
+---
+// src/pages/contact.astro
+import DefaultLayout from '../layouts/DefaultLayout.astro';
+import { getContactInfo } from '../lib/directus';
+
+const contactInfo = await getContactInfo();
+---
+
+<DefaultLayout title="Contacto - Restaurante">
+  <!-- Espaciador para navbar fijo -->
+  <div class="h-20"></div>
+  
+  <!-- Cabecera de la página -->
+  <div class="bg-gray-50 py-16">
+    <div class="container mx-auto px-4 text-center">
+      <h1 class="text-4xl md:text-5xl font-bold mb-4">Contacto</h1>
+      <p class="text-gray-600 max-w-2xl mx-auto">¿Tienes alguna pregunta o comentario? Estamos aquí para ayudarte.</p>
+    </div>
+  </div>
+  
+  <!-- Información de contacto y formulario -->
+  <section class="py-20">
+    <div class="container mx-auto px-4">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+        <!-- Información de contacto -->
+        <div>
+          <h2 class="text-2xl font-bold mb-6">Información de Contacto</h2>
+          
+          <div class="space-y-6">
+            {contactInfo?.address && (
+              <div class="flex items-start">
+                <div class="bg-[var(--primaryColor)] rounded-full p-3 mr-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="text-lg font-medium mb-1">Dirección</h3>
+                  <p class="text-gray-600">{contactInfo.address}</p>
+                </div>
+              </div>
+            )}
+            
+            {contactInfo?.phone && (
+              <div class="flex items-start">
+                <div class="bg-[var(--primaryColor)] rounded-full p-3 mr-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="text-lg font-medium mb-1">Teléfono</h3>
+                  <p class="text-gray-600">{contactInfo.phone}</p>
+                </div>
+              </div>
+            )}
+            
+            {contactInfo?.email && (
+              <div class="flex items-start">
+                <div class="bg-[var(--primaryColor)] rounded-full p-3 mr-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="text-lg font-medium mb-1">Email</h3>
+                  <p class="text-gray-600">{contactInfo.email}</p>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <!-- Mapa -->
+          {contactInfo?.map_embed_url && (
+            <div class="mt-8">
+              <h3 class="text-lg font-medium mb-4">Encuéntranos</h3>
+              <div class="rounded-lg overflow-hidden shadow-md h-80">
+                <iframe 
+                  src={contactInfo.map_embed_url} 
+                  width="100%" 
+                  height="100%" 
+                  style="border:0;" 
+                  allowfullscreen="" 
+                  loading="lazy"
+                  referrerpolicy="no-referrer-when-downgrade"
+                  title="Ubicación del restaurante"
+                ></iframe>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        <!-- Formulario de contacto -->
+        <div>
+          <h2 class="text-2xl font-bold mb-6">Envíanos un mensaje</h2>
+          
+          <form id="contactForm" class="space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label for="nombre" class="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
+                <input 
+                  type="text" 
+                  id="nombre" 
+                  name="nombre" 
+                  required
+                  class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--primaryColor)] focus:border-transparent"
+                >
+              </div>
+              
+              <div>
+                <label for="telefono" class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                <input 
+                  type="tel" 
+                  id="telefono" 
+                  name="telefono"
+                  class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--primaryColor)] focus:border-transparent"
+                >
+              </div>
+            </div>
+            
+            <div>
+              <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input 
+                type="email" 
+                id="email" 
+                name="email" 
+                required
+                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--primaryColor)] focus:border-transparent"
+              >
+            </div>
+            
+            <div>
+              <label for="asunto" class="block text-sm font-medium text-gray-700 mb-1">Asunto</label>
+              <input 
+                type="text" 
+                id="asunto" 
+                name="asunto" 
+                required
+                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--primaryColor)] focus:border-transparent"
+              >
+            </div>
+            
+            <div>
+              <label for="mensaje" class="block text-sm font-medium text-gray-700 mb-1">Mensaje</label>
+              <textarea 
+                id="mensaje" 
+                name="mensaje" 
+                rows="5" 
+                required
+                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--primaryColor)] focus:border-transparent"
+              ></textarea>
+            </div>
+            
+            <button 
+              type="submit" 
+              class="w-full bg-[var(--primaryColor)] text-white py-3 px-6 rounded-md hover:bg-[var(--secondaryColor)] transition-colors duration-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Enviar mensaje
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+</DefaultLayout>
+
+<script>
+  // Formulario de contacto mejorado
+  document.addEventListener('DOMContentLoaded', () => {
+    const form = document.getElementById('contactForm');
+    const submitBtn = form?.querySelector('button[type="submit"]');
+    
+    if (form && submitBtn) {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        // Deshabilitar el botón durante el envío
+        const originalText = submitBtn.textContent;
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Enviando...';
+        
+        // Obtener datos del formulario
+        const formData = new FormData(form);
+        const contactData = {
+          nombre: formData.get('nombre'),
+          telefono: formData.get('telefono'),
+          email: formData.get('email'),
+          asunto: formData.get('asunto'),
+          mensaje: formData.get('mensaje')
+        };
+        
+        console.log('Enviando datos de contacto:', contactData);
+        
+        try {
+          // Usar la API route de Astro
+          const response = await fetch('/api/contact', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(contactData)
+          });
+          
+          console.log('Respuesta del servidor:', response);
+          
+          if (response.ok) {
+            const result = await response.json();
+            console.log('Mensaje enviado:', result);
+            
+            // Mostrar mensaje de éxito personalizado del servidor
+            alert(result.message || '¡Mensaje enviado con éxito! Te contactaremos pronto.');
+            form.reset();
+          } else {
+            const errorData = await response.json();
+            console.error('Error al enviar mensaje:', errorData);
+            
+            // Mostrar mensaje de error más específico
+            const errorMessage = errorData.message || 'Hubo un problema al enviar tu mensaje.';
+            alert(errorMessage);
+          }
+        } catch (error) {
+          console.error('Error de red:', error);
+          alert('Error de conexión. Por favor, verifica tu conexión a internet e inténtalo de nuevo.');
+        } finally {
+          // Rehabilitar el botón
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalText;
+        }
+      });
+    }
+  });
+</script>

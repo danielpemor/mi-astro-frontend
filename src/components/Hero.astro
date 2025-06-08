@@ -1,0 +1,46 @@
+---
+// src/components/Hero.astro
+import { getHeroSection, getAssetUrl } from '../lib/directus';
+
+const heroData = await getHeroSection();
+const bgImage = heroData?.background_image 
+  ? getAssetUrl(heroData.background_image) 
+  : '/hero-background.jpg';
+---
+
+<section class="relative h-screen min-h-[600px] flex items-center text-white overflow-hidden">
+  <!-- Imagen de fondo -->
+  <div class="absolute inset-0 z-0">
+    <img 
+      src={bgImage} 
+      alt="Hero Background" 
+      class="w-full h-full object-cover"
+    />
+    <div class="absolute inset-0 bg-black/40"></div>
+  </div>
+  
+  <!-- Contenido -->
+  <div class="container relative z-10 mx-auto px-4 text-center">
+    <h1 class="text-4xl md:text-6xl font-bold mb-6 max-w-4xl mx-auto leading-tight">
+      {heroData?.title || "Sabores frescos, ingredientes locales"}
+    </h1>
+    
+    <p class="text-xl md:text-2xl mb-10 max-w-2xl mx-auto font-light">
+      {heroData?.subtitle || "Descubre nuestra cocina de temporada con ingredientes locales de los mejores productores"}
+    </p>
+    
+    <a 
+      href={heroData?.cta_link || "/menu"} 
+      class="bg-[var(--primaryColor)] hover:bg-[var(--secondaryColor)] text-white font-medium py-3 px-8 rounded-md transition-colors duration-300 uppercase tracking-wide text-sm inline-block"
+    >
+      {heroData?.cta_text || "Ver nuestro menú"}
+    </a>
+  </div>
+  
+  <!-- Scroll indicator -->
+  <div class="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-white animate-bounce">
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+    </svg>
+  </div>
+</section>

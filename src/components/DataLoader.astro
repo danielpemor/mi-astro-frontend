@@ -1,0 +1,40 @@
+---
+// src/components/DataLoader.astro
+// Este componente no renderiza nada en pantalla, solo maneja la recarga de datos
+const refreshInterval = 10000; // 10 segundos
+---
+
+<script define:vars={{ refreshInterval }}>
+  // Función que se ejecuta en el navegador
+  function setupAutoRefresh() {
+    let lastRefresh = Date.now();
+    
+    // Comprobar si han pasado más de 5 minutos desde la última carga de la página
+    window.addEventListener('focus', () => {
+      const now = Date.now();
+      if (now - lastRefresh > 300000) { // 5 minutos
+        window.location.reload();
+      }
+    });
+    
+    // Recargar datos en segundo plano periódicamente
+    setInterval(() => {
+      const timestamp = Date.now();
+      
+      // Hacer una solicitud a la API para comprobar si hay cambios
+      fetch(`/api/check-updates?t=${timestamp}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.hasUpdates) {
+            window.location.reload();
+          }
+        })
+        .catch(err => console.error('Error checking updates:', err));
+    }, refreshInterval);
+  }
+  
+  // Iniciar auto-recarga solo en desarrollo
+  if (import.meta.env.DEV) {
+    setupAutoRefresh();
+  }
+</script>

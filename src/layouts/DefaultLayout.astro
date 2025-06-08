@@ -1,0 +1,68 @@
+---
+// src/layouts/DefaultLayout.astro
+import { getSiteSettings, getAssetUrl } from '../lib/directus';
+import Navbar from '../components/Navbar.astro';
+import Footer from '../components/Footer.astro';
+import '../styles/global.css';
+
+// Obtener configuración del sitio
+const siteSettings = await getSiteSettings();
+
+// Valores predeterminados
+const logoUrl = siteSettings?.logo ? getAssetUrl(siteSettings.logo) : '/placeholder-logo.png';
+const primaryColor = siteSettings?.primary_color || '#3b8449';
+const secondaryColor = siteSettings?.secondary_color || '#274d30';
+
+const { title = 'Restaurante', description = 'Sabores auténticos para cada ocasión' } = Astro.props;
+---
+
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="icon" href={siteSettings?.favicon ? getAssetUrl(siteSettings.favicon) : '/favicon.ico'} />
+    
+    <!-- Fuentes -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Playfair+Display:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- Variables CSS dinámicas -->
+    <style define:vars={{ primaryColor, secondaryColor }}>
+      /* Variables disponibles como var(--primaryColor), etc. */
+    </style>
+  </head>
+  <body>
+    <Navbar logoUrl={logoUrl} />
+    
+    <main>
+      <slot />
+    </main>
+    
+    <Footer />
+    {import.meta.env.DEV && (
+  <button 
+    class="fixed bottom-4 right-4 bg-blue-500 hover:bg-blue-600 text-white p-3 rounded-full shadow-lg z-50 flex items-center justify-center"
+    id="refreshButton"
+    title="Recargar datos de Directus"
+  >
+    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+    </svg>
+  </button>
+)}
+
+<script>
+  // Solo en desarrollo
+  const refreshButton = document.getElementById('refreshButton');
+  if (refreshButton) {
+    refreshButton.addEventListener('click', () => {
+      window.location.reload();
+    });
+  }
+</script>
+  </body>
+</html>

@@ -1,0 +1,40 @@
+---
+// src/components/FeaturedMenu.astro
+import { getMenuItems, getAssetUrl } from '../lib/directus';
+
+// Obtener solo los elementos destacados o limitar a 3-6 elementos
+const menuItems = await getMenuItems();
+const featuredItems = menuItems.filter(item => item.is_available).slice(0, 6);
+---
+
+<section class="py-20 bg-gray-50">
+  <div class="container mx-auto px-4">
+    <h2 class="text-3xl md:text-4xl font-bold text-center mb-4">Nuestros Destacados</h2>
+    <p class="text-gray-600 text-center max-w-2xl mx-auto mb-12">Descubre nuestra selección de platos preparados con ingredientes frescos y de temporada.</p>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      {featuredItems.map(item => (
+        <div class="bg-white rounded-lg shadow-md overflow-hidden transition-transform hover:scale-[1.02] duration-300">
+          <img 
+            src={item.image ? getAssetUrl(item.image) : '/placeholder-food.jpg'} 
+            alt={item.name} 
+            class="w-full h-56 object-cover"
+          />
+          <div class="p-6">
+            <div class="flex justify-between items-start mb-2">
+              <h3 class="text-xl font-medium">{item.name}</h3>
+              <span class="text-lg font-semibold text-[var(--primaryColor)]">${Number(item.price).toFixed(2)}</span>
+            </div>
+            <p class="text-gray-600 text-sm">{item.description}</p>
+          </div>
+        </div>
+      ))}
+    </div>
+    
+    <div class="text-center mt-12">
+      <a href="/menu" class="bg-[var(--primaryColor)] hover:bg-[var(--secondaryColor)] text-white font-medium py-2 px-6 rounded transition-colors duration-300 uppercase tracking-wide text-sm inline-block">
+        Ver menú completo
+      </a>
+    </div>
+  </div>
+</section>

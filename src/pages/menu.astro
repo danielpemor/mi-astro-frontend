@@ -1,0 +1,151 @@
+---
+// src/pages/menu.astro
+import DefaultLayout from '../layouts/DefaultLayout.astro';
+import { getMenuCategories, getMenuItems, getAssetUrl } from '../lib/directus';
+
+// Obtener categorías y elementos del menú
+const categories = await getMenuCategories();
+const menuItems = await getMenuItems();
+
+// Agrupar elementos por categoría
+const menuByCategory = categories.map(category => {
+  return {
+    ...category,
+    items: menuItems.filter(item => item.category?.id === category.id && item.is_available)
+  };
+});
+---
+
+<DefaultLayout title="Menú - Restaurante">
+  <!-- Espaciador para navbar fijo -->
+  <div class="h-20"></div>
+  
+  <!-- Cabecera de la página -->
+  <div class="bg-gray-50 py-16">
+    <div class="container mx-auto px-4 text-center">
+      <h1 class="text-4xl md:text-5xl font-bold mb-4">Nuestro Menú</h1>
+      <p class="text-gray-600 max-w-2xl mx-auto">Descubre nuestra selección de platos preparados con ingredientes frescos y de temporada.</p>
+    </div>
+  </div>
+  
+  <!-- Navegación de categorías estilo The Little Beet -->
+  <div class="sticky top-20 bg-white z-40 shadow-sm">
+    <div class="container mx-auto px-4">
+      <div class="overflow-x-auto flex py-4 gap-4 scrollbar-hide">
+        <button 
+          class="category-btn active whitespace-nowrap px-5 py-2 rounded-full text-sm font-medium transition-colors border-2 border-[var(--primaryColor)] bg-[var(--primaryColor)] text-white"
+          data-category="all"
+        >
+          Todo el menú
+        </button>
+        
+        {categories.map(category => (
+          <button 
+            class="category-btn whitespace-nowrap px-5 py-2 rounded-full text-sm font-medium transition-colors border-2 border-[var(--primaryColor)] text-[var(--primaryColor)]"
+            data-category={category.id}
+          >
+            {category.name}
+          </button>
+        ))}
+      </div>
+    </div>
+  </div>
+  
+  <!-- Sección del menú -->
+  <section class="py-16">
+    <div class="container mx-auto px-4">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {menuItems.map(item => (
+          <div class="menu-item" data-category={item.category?.id}>
+            <div class="bg-white rounded-lg shadow-md overflow-hidden transition-transform hover:scale-[1.02] duration-300">
+              <div class="relative">
+                <img 
+                  src={item.image ? getAssetUrl(item.image) : '/placeholder-food.jpg'} 
+                  alt={item.name} 
+                  class="w-full h-60 object-cover"
+                />
+                
+                {item.dietary_tags && item.dietary_tags.length > 0 && (
+                  <div class="absolute top-2 right-2 flex flex-wrap gap-2 justify-end">
+                    {item.dietary_tags.map((tag: string) => (
+                      <span class="bg-white text-[var(--primaryColor)] text-xs px-2 py-1 rounded-full shadow">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+              
+              <div class="p-6">
+                <div class="flex justify-between items-start mb-2">
+                  <h3 class="text-xl font-medium">{item.name}</h3>
+                  <span class="text-lg font-semibold text-[var(--primaryColor)]">${Number(item.price).toFixed(2)}</span>
+                </div>
+                <p class="text-gray-600 text-sm">{item.description}</p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+      
+      <!-- Mensaje de no hay resultados (oculto por defecto) -->
+      <div id="noResults" class="text-center py-12 hidden">
+        <p class="text-gray-500 text-lg">No hay platos disponibles en esta categoría.</p>
+      </div>
+    </div>
+  </section>
+</DefaultLayout>
+
+<script>
+  // Filtrado por categoría
+  document.addEventListener('DOMContentLoaded', () => {
+    const categoryButtons = document.querySelectorAll('.category-btn');
+    const menuItems = document.querySelectorAll('.menu-item');
+    const noResults = document.getElementById('noResults');
+    
+    categoryButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        // Actualizar botones activos
+        categoryButtons.forEach(btn => {
+          btn.classList.remove('active', 'bg-[var(--primaryColor)]', 'text-white');
+          btn.classList.add('text-[var(--primaryColor)]');
+        });
+        button.classList.add('active', 'bg-[var(--primaryColor)]', 'text-white');
+        button.classList.remove('text-[var(--primaryColor)]');
+        
+        // Obtener categoría seleccionada
+        const selectedCategory = button.getAttribute('data-category');
+        
+        // Filtrar elementos
+        let visibleCount = 0;
+        
+        menuItems.forEach(item => {
+          if (selectedCategory === 'all' || item.getAttribute('data-category') === selectedCategory) {
+            item.classList.remove('hidden');
+            visibleCount++;
+          } else {
+            item.classList.add('hidden');
+          }
+        });
+        
+        // Mostrar/ocultar mensaje de no hay resultados
+        if (visibleCount === 0 && noResults) {
+          noResults.classList.remove('hidden');
+        } else if (noResults) {
+          noResults.classList.add('hidden');
+        }
+      });
+    });
+  });
+</script>
+
+<style>
+  /* Esconde la barra de desplazamiento pero mantiene la funcionalidad */
+  .scrollbar-hide {
+    -ms-overflow-style: none;  /* IE y Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none; /* Chrome, Safari y Opera */
+  }
+</style>

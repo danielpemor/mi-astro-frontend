@@ -1,0 +1,29 @@
+# Variables de entorno - IMPORTANTE
+.env
+.env.local
+.env.production
+.env.development
+
+# Dependencias
+node_modules/
+
+# Archivos de build
+dist/
+build/
+.directus/
+
+# Base de datos local (si usas SQLite)
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs
+*.log
+logs/
+
+# Archivos temporales
+.DS_Store
+Thumbs.db
+
+# Cache
+.cache/

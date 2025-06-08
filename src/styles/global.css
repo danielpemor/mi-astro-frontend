@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary-color: #3b8449;
+  --secondary-color: #274d30;
+  --bg-beige: #f5f3eb; /* Color beige claro */
+  --bg-beige-dark: #e8e5d9; /* Color beige más oscuro para contraste */
+  --text-primary: #2c3e50;
+}
+
+/* Aplicar fondo blanco al body */
+body {
+  font-family: 'Montserrat', sans-serif;
+  @apply text-gray-800;
+  background-color: white;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Playfair Display', serif;
+  @apply font-bold;
+}
+
+/* Estilos para links activos en navegación - TODO VERDE */
+a.active, 
+.nav-link:hover,
+.nav-link.active {
+  color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+}
+
+/* Asegurar que los elementos seleccionados usen verde */
+*:focus {
+  outline-color: var(--primary-color);
+}
+
+::selection {
+  background-color: var(--primary-color);
+  color: white;
+}
+
+/* Reemplazar todos los colores azules con verde */
+.text-blue-500, .text-blue-600, .text-blue-700 {
+  color: var(--primary-color) !important;
+}
+
+.bg-blue-500, .bg-blue-600, .bg-blue-700 {
+  background-color: var(--primary-color) !important;
+}
+
+.border-blue-500, .border-blue-600, .border-blue-700 {
+  border-color: var(--primary-color) !important;
+}
+
+@layer components {
+  .container {
+    @apply max-w-7xl mx-auto px-4;
+  }
+  
+  .btn-primary {
+    @apply bg-[var(--primary-color)] text-white py-2 px-6 rounded transition-all hover:bg-[var(--secondary-color)];
+  }
+  
+  .section-title {
+    @apply text-3xl md:text-4xl font-bold mb-10 text-center;
+  }
+  
+  .menu-card {
+    @apply bg-[var(--bg-beige)] rounded-lg shadow-md overflow-hidden transition-all hover:shadow-lg;
+  }
+  
+  /* Secciones con fondo beige para contraste */
+  .bg-beige-section {
+    @apply bg-[var(--bg-beige)] shadow-sm;
+  }
+}
+
+/* Footer verde oscuro */
+footer {
+  background-color: var(--secondary-color) !important;
+  color: white !important;
+}
+
+footer a {
+  color: white !important;
+}
+
+footer a:hover {
+  color: var(--bg-beige) !important;
+}

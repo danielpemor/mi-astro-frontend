@@ -1,0 +1,155 @@
+---
+// src/pages/about.astro
+import DefaultLayout from '../layouts/DefaultLayout.astro';
+import { getAboutUs, getOpeningHours, getAssetUrl } from '../lib/directus';
+
+const aboutData = await getAboutUs();
+const openingHours = await getOpeningHours();
+
+const imageUrl = aboutData?.image ? getAssetUrl(aboutData.image) : '/about-placeholder.jpg';
+---
+
+
+  <!-- Cabecera de la página -->
+  <div class="bg-white shadow-sm py-20 pt-32">
+    <div class="container mx-auto text-center px-4">
+      <h1 class="text-4xl md:text-5xl font-bold mb-4 text-[var(--secondary-color)]">Sobre Nosotros</h1>
+      <p class="text-gray-600 max-w-2xl mx-auto text-lg">Conoce nuestra historia, filosofía y el equipo detrás de cada plato.</p>
+    </div>
+  </div>
+  
+  <!-- Sección principal -->
+  <section class="py-20 bg-[var(--bg-beige)]">
+    <div class="container mx-auto px-4">
+      <div class="flex flex-col lg:flex-row items-center gap-12">
+        <!-- Imagen -->
+        <div class="w-full lg:w-1/2">
+          <img 
+            src={imageUrl} 
+            alt="Sobre nosotros" 
+            class="w-full h-[500px] object-cover rounded-2xl shadow-2xl"
+            onerror="this.onerror=null; this.src='https://via.placeholder.com/800x500?text=Sobre+Nosotros'"
+          />
+        </div>
+        
+        <!-- Contenido -->
+        <div class="w-full lg:w-1/2 bg-white p-10 rounded-2xl shadow-xl">
+          <h2 class="text-3xl md:text-4xl font-bold mb-6 text-[var(--secondary-color)]">
+            {aboutData?.title || "Nuestra Historia"}
+          </h2>
+          
+          <div class="prose prose-lg max-w-none text-gray-700">
+            {aboutData?.content ? (
+              <div set:html={aboutData.content}></div>
+            ) : (
+              <div>
+                <p class="mb-4 leading-relaxed">
+                  Nuestro restaurante nació de la pasión por la cocina y los ingredientes de calidad. Desde nuestros inicios, hemos mantenido el compromiso de ofrecer platos elaborados con productos frescos y de temporada.
+                </p>
+                <p class="mb-4 leading-relaxed">
+                  Trabajamos directamente con productores locales para garantizar la máxima calidad en cada ingrediente que utilizamos, creando así una experiencia gastronómica auténtica que respeta tanto la tradición como la innovación.
+                </p>
+                <p class="leading-relaxed">
+                  Cada plato que servimos cuenta una historia y representa nuestra filosofía: simplicidad, autenticidad y respeto por el producto.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  <!-- Filosofía -->
+  <section class="py-20 bg-white">
+    <div class="container mx-auto px-4">
+      <h2 class="text-4xl font-bold text-center mb-16 text-[var(--secondary-color)]">Nuestra Filosofía</h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div class="text-center bg-[var(--bg-beige)] rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+          <div class="bg-white h-20 w-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-md border-4 border-[var(--primary-color)]">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-[var(--primary-color)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+            </svg>
+          </div>
+          <h3 class="text-2xl font-semibold mb-4 text-[var(--secondary-color)]">Ingredientes Frescos</h3>
+          <p class="text-gray-700 leading-relaxed">Seleccionamos los mejores ingredientes de temporada para ofrecerte platos llenos de sabor y frescura.</p>
+        </div>
+        
+        <div class="text-center bg-[var(--bg-beige)] rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+          <div class="bg-white h-20 w-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-md border-4 border-[var(--primary-color)]">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-[var(--primary-color)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h3 class="text-2xl font-semibold mb-4 text-[var(--secondary-color)]">Sostenibilidad</h3>
+          <p class="text-gray-700 leading-relaxed">Nos comprometemos con el medio ambiente utilizando prácticas sostenibles y reduciendo nuestro impacto ecológico.</p>
+        </div>
+        
+        <div class="text-center bg-[var(--bg-beige)] rounded-2xl p-8 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+          <div class="bg-white h-20 w-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-md border-4 border-[var(--primary-color)]">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-[var(--primary-color)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+            </svg>
+          </div>
+          <h3 class="text-2xl font-semibold mb-4 text-[var(--secondary-color)]">Comunidad Local</h3>
+          <p class="text-gray-700 leading-relaxed">Apoyamos a productores locales y participamos activamente en nuestra comunidad para fortalecer la economía local.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+  
+  <!-- Horarios -->
+  <section class="py-20 bg-[var(--bg-beige)]">
+    <div class="container mx-auto max-w-4xl px-4">
+      <h2 class="text-4xl font-bold text-center mb-12 text-[var(--secondary-color)]">Nuestros Horarios</h2>
+      
+      <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
+        <table class="w-full">
+          <thead class="bg-[var(--secondary-color)] text-white">
+            <tr>
+              <th class="py-5 px-8 text-left text-lg font-semibold">Día</th>
+              <th class="py-5 px-8 text-right text-lg font-semibold">Horario</th>
+            </tr>
+          </thead>
+          <tbody>
+            {openingHours.length > 0 ? (
+              openingHours.map((day, index) => (
+                <tr class={`border-b border-gray-100 ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-[var(--bg-beige)]/30 transition-colors`}>
+                  <td class="py-5 px-8 font-medium text-gray-800">{day.day_of_week}</td>
+                  <td class="py-5 px-8 text-right text-gray-700">
+                    {day.is_closed ? (
+                      <span class="text-red-500 font-medium">Cerrado</span>
+                    ) : (
+                      `${day.open_time} - ${day.close_time}`
+                    )}
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <>
+                <tr class="border-b border-gray-100 hover:bg-[var(--bg-beige)]/30 transition-colors">
+                  <td class="py-5 px-8 font-medium text-gray-800">Lunes - Viernes</td>
+                  <td class="py-5 px-8 text-right text-gray-700">10:00 - 22:00</td>
+                </tr>
+                <tr class="border-b border-gray-100 bg-gray-50 hover:bg-[var(--bg-beige)]/30 transition-colors">
+                  <td class="py-5 px-8 font-medium text-gray-800">Sábado</td>
+                  <td class="py-5 px-8 text-right text-gray-700">10:00 - 22:00</td>
+                </tr>
+                <tr class="hover:bg-[var(--bg-beige)]/30 transition-colors">
+                  <td class="py-5 px-8 font-medium text-gray-800">Domingo</td>
+                  <td class="py-5 px-8 text-right text-gray-700">10:00 - 22:00</td>
+                </tr>
+              </>
+            )}
+          </tbody>
+        </table>
+      </div>
+      
+      <div class="text-center mt-12">
+        <a href="/contact" class="inline-block bg-[var(--primary-color)] text-white hover:bg-[var(--primary-hover)] font-medium py-3 px-8 rounded-lg transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-0.5">
+          Contactar ahora
+        </a>
+      </div>
+    </div>
+  </section>
