@@ -220,7 +220,22 @@ export function getAssetUrl(assetId: string | null | undefined): string {
   
   const baseUrl = import.meta.env.DIRECTUS_URL || 'http://localhost:8055';
   
-  // Intentar múltiples rutas posibles
+  // En producción, usar la ruta que funcione
+  if (import.meta.env.PROD) {
+    // Probar primero /files/, luego /assets/
+    return `${baseUrl}/files/${assetId}`;
+  }
+  
+  return `${baseUrl}/assets/${assetId}`;
+}
+
+// Función alternativa con fallback
+export function getAssetUrlWithFallback(assetId: string | null | undefined): string {
+  if (!assetId) return '/placeholder-food.jpg';
+  
+  const baseUrl = import.meta.env.DIRECTUS_URL || 'http://localhost:8055';
+  
+  // Intentar /files/ primero, si falla usar placeholder
   return `${baseUrl}/files/${assetId}`;
 }
 
