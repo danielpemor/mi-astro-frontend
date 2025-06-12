@@ -88,13 +88,105 @@ export interface PhilosophyItem {
   order: number;
 }
 
-// URL de la API de Directus
-const directusUrl = import.meta.env.DIRECTUS_URL || 'http://localhost:8055';
+// URL de la API de Directus - CORREGIDA
+const directusUrl = import.meta.env.PUBLIC_DIRECTUS_URL || import.meta.env.DIRECTUS_URL || 'http://localhost:8055';
 
 // Cliente de Directus
 const directus = createDirectus(directusUrl).with(rest());
 
-// Datos de ejemplo para usar cuando Directus no está disponible
+// FUNCIÓN PRINCIPAL PARA ASSETS - COMPLETAMENTE CORREGIDA
+export function getAssetUrl(assetId: string | null | undefined, params?: { 
+  width?: number; 
+  height?: number; 
+  quality?: number;
+  fit?: 'cover' | 'contain' | 'inside' | 'outside';
+}): string {
+  if (!assetId) return '/placeholder-food.jpg';
+  
+  // Limpiar el asset ID por si viene con rutas extra
+  const cleanAssetId = assetId.toString().replace(/^.*\//, '');
+  
+  const baseUrl = directusUrl.replace(/\/$/, ''); // Remover slash final
+  
+  // Construir parámetros de transformación
+  const searchParams = new URLSearchParams();
+  if (params?.width) searchParams.append('width', params.width.toString());
+  if (params?.height) searchParams.append('height', params.height.toString());
+  if (params?.quality) searchParams.append('quality', params.quality.toString());
+  if (params?.fit) searchParams.append('fit', params.fit);
+  
+  const queryString = searchParams.toString();
+  
+  // Usar /files/ que es la ruta correcta para archivos públicos
+  const url = `${baseUrl}/files/${cleanAssetId}${queryString ? `?${queryString}` : ''}`;
+  
+  return url;
+}
+
+// Función para obtener URL con transformaciones específicas
+export function getOptimizedImageUrl(
+  assetId: string | null | undefined,
+  width?: number,
+  height?: number,
+  quality: number = 80
+): string {
+  return getAssetUrl(assetId, { width, height, quality, fit: 'cover' });
+}
+
+// Función para verificar si una imagen existe y es accesible
+export async function verifyAssetUrl(assetId: string): Promise<{
+  exists: boolean;
+  url: string;
+  error?: string;
+}> {
+  const url = getAssetUrl(assetId);
+  
+  try {
+    const response = await fetch(url, { 
+      method: 'HEAD',
+      headers: {
+        'Accept': 'image/*'
+      }
+    });
+    
+    return {
+      exists: response.ok,
+      url: url,
+      error: response.ok ? undefined : `HTTP ${response.status}: ${response.statusText}`
+    };
+  } catch (error) {
+    return {
+      exists: false,
+      url: url,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    };
+  }
+}
+
+// Función de debug mejorada
+export function debugAssetUrls(assetId: string): {
+  attempted: string[];
+  recommended: string;
+} {
+  if (!assetId) return { attempted: [], recommended: '/placeholder-food.jpg' };
+  
+  const baseUrl = directusUrl.replace(/\/$/, '');
+  const cleanId = assetId.toString().replace(/^.*\//, '');
+  
+  const attempted = [
+    `${baseUrl}/files/${cleanId}`,
+    `${baseUrl}/assets/${cleanId}`,
+    `${baseUrl}/uploads/${cleanId}`,
+    `${baseUrl}/api/files/${cleanId}`,
+  ];
+  
+  return {
+    attempted,
+    recommended: attempted[0] // /files/ es la correcta
+  };
+}
+
+// Datos de ejemplo para fallback (mantengo los tuyos)
 const mockData = {
   menuCategories: [
     { id: 1, name: 'Entradas', order: 1 },
@@ -212,101 +304,13 @@ const mockData = {
   ]
 };
 
-// FUNCIONES CORREGIDAS PARA OBTENER ASSETS
-
-// Función principal para obtener URL de assets - CORREGIDA
-export function getAssetUrl(assetId: string | null | undefined): string {
-  if (!assetId) return '/placeholder-food.jpg';
-  
-  const baseUrl = import.meta.env.DIRECTUS_URL || 'http://localhost:8055';
-  
-  // En producción, usar la ruta que funcione
-  if (import.meta.env.PROD) {
-    // Probar primero /files/, luego /assets/
-    return `${baseUrl}/files/${assetId}`;
-  }
-  
-  return `${baseUrl}/assets/${assetId}`;
-}
-
-// Función alternativa con fallback
-export function getAssetUrlWithFallback(assetId: string | null | undefined): string {
-  if (!assetId) return '/placeholder-food.jpg';
-  
-  const baseUrl = import.meta.env.DIRECTUS_URL || 'http://localhost:8055';
-  
-  // Intentar /files/ primero, si falla usar placeholder
-  return `${baseUrl}/files/${assetId}`;
-}
-
-// Función alternativa usando la API de archivos
-export async function getAssetInfo(assetId: string): Promise<any> {
-  try {
-    const response = await directus.request(readItem('directus_files', assetId));
-    return response;
-  } catch (error) {
-    console.error('Error fetching asset info:', error);
-    return null;
-  }
-}
-
-// Función para obtener URL con transformaciones
-export function getAssetUrlWithTransform(
-  assetId: string | null | undefined, 
-  width?: number, 
-  height?: number, 
-  quality: number = 80
-): string {
-  if (!assetId) return '/placeholder-food.jpg';
-  
-  const baseUrl = import.meta.env.DIRECTUS_URL || 'http://localhost:8055';
-  const params = new URLSearchParams();
-  
-  if (width) params.append('width', width.toString());
-  if (height) params.append('height', height.toString());
-  params.append('quality', quality.toString());
-  
-  const queryString = params.toString();
-  return `${baseUrl}/files/${assetId}${queryString ? `?${queryString}` : ''}`;
-}
-
-// Función de debugging para probar diferentes rutas
-export function getAssetUrlDebug(assetId: string | null | undefined): string[] {
-  if (!assetId) return [];
-  
-  const baseUrl = import.meta.env.DIRECTUS_URL || 'http://localhost:8055';
-  
-  return [
-    `${baseUrl}/files/${assetId}`,
-    `${baseUrl}/assets/${assetId}`,
-    `${baseUrl}/uploads/${assetId}`,
-    `${baseUrl}/api/files/${assetId}`,
-  ];
-}
-
-// Función para verificar si una imagen existe
-export async function checkAssetExists(assetId: string): Promise<boolean> {
-  try {
-    const response = await fetch(getAssetUrl(assetId), { method: 'HEAD' });
-    return response.ok;
-  } catch (error) {
-    console.error('Error checking asset:', error);
-    return false;
-  }
-}
-
-// Funciones para obtener datos de Directus con evitación de caché
+// Funciones para obtener datos con mejor manejo de errores
 export async function getMenuCategories(): Promise<MenuCategory[]> {
   try {
-    const options: any = {
+    const response = await directus.request(readItems('menu_categories', {
       sort: ['order'],
-    };
-    
-    if (import.meta.env.DEV) {
-      options.timestamp = Date.now();
-    }
-    
-    const response = await directus.request(readItems('menu_categories', options));
+      limit: -1
+    }));
     return response as unknown as MenuCategory[];
   } catch (error) {
     console.error('Error fetching menu categories:', error);
@@ -318,14 +322,11 @@ export async function getMenuItems(categoryId: number | null = null): Promise<Me
   try {
     const query: any = {
       fields: ['*', { category: ['id', 'name'] }],
+      limit: -1
     };
     
     if (categoryId) {
       query.filter = { category: { id: { _eq: categoryId } } };
-    }
-    
-    if (import.meta.env.DEV) {
-      query.timestamp = Date.now();
     }
     
     const response = await directus.request(readItems('menu_items', query));
@@ -338,12 +339,7 @@ export async function getMenuItems(categoryId: number | null = null): Promise<Me
 
 export async function getHeroSection(): Promise<HeroSection | null> {
   try {
-    const options: any = {};
-    if (import.meta.env.DEV) {
-      options.timestamp = Date.now();
-    }
-    
-    const response = await directus.request(readItem('hero_section', 1, options));
+    const response = await directus.request(readItem('hero_section', 1));
     return response as unknown as HeroSection;
   } catch (error) {
     console.error('Error fetching hero section:', error);
@@ -353,12 +349,9 @@ export async function getHeroSection(): Promise<HeroSection | null> {
 
 export async function getGalleryImages(): Promise<GalleryImage[]> {
   try {
-    const options: any = {};
-    if (import.meta.env.DEV) {
-      options.timestamp = Date.now();
-    }
-    
-    const response = await directus.request(readItems('gallery_images', options));
+    const response = await directus.request(readItems('gallery_images', {
+      limit: -1
+    }));
     return response as unknown as GalleryImage[];
   } catch (error) {
     console.error('Error fetching gallery images:', error);
@@ -368,12 +361,7 @@ export async function getGalleryImages(): Promise<GalleryImage[]> {
 
 export async function getAboutUs(): Promise<AboutUs | null> {
   try {
-    const options: any = {};
-    if (import.meta.env.DEV) {
-      options.timestamp = Date.now();
-    }
-    
-    const response = await directus.request(readItem('about_us', 1, options));
+    const response = await directus.request(readItem('about_us', 1));
     return response as unknown as AboutUs;
   } catch (error) {
     console.error('Error fetching about us:', error);
@@ -383,15 +371,10 @@ export async function getAboutUs(): Promise<AboutUs | null> {
 
 export async function getOpeningHours(): Promise<OpeningHour[]> {
   try {
-    const options: any = {
+    const response = await directus.request(readItems('opening_hours', {
       sort: ['day_of_week'],
-    };
-    
-    if (import.meta.env.DEV) {
-      options.timestamp = Date.now();
-    }
-    
-    const response = await directus.request(readItems('opening_hours', options));
+      limit: -1
+    }));
     return response as unknown as OpeningHour[];
   } catch (error) {
     console.error('Error fetching opening hours:', error);
@@ -401,12 +384,7 @@ export async function getOpeningHours(): Promise<OpeningHour[]> {
 
 export async function getSiteSettings(): Promise<SiteSettings | null> {
   try {
-    const options: any = {};
-    if (import.meta.env.DEV) {
-      options.timestamp = Date.now();
-    }
-    
-    const response = await directus.request(readItem('site_settings', 1, options));
+    const response = await directus.request(readItem('site_settings', 1));
     return response as unknown as SiteSettings;
   } catch (error) {
     console.error('Error fetching site settings:', error);
@@ -416,12 +394,9 @@ export async function getSiteSettings(): Promise<SiteSettings | null> {
 
 export async function getSocialLinks(): Promise<SocialLink[]> {
   try {
-    const options: any = {};
-    if (import.meta.env.DEV) {
-      options.timestamp = Date.now();
-    }
-    
-    const response = await directus.request(readItems('social_links', options));
+    const response = await directus.request(readItems('social_links', {
+      limit: -1
+    }));
     return response as unknown as SocialLink[];
   } catch (error) {
     console.error('Error fetching social links:', error);
@@ -431,12 +406,9 @@ export async function getSocialLinks(): Promise<SocialLink[]> {
 
 export async function getTestimonials(): Promise<Testimonial[]> {
   try {
-    const options: any = {};
-    if (import.meta.env.DEV) {
-      options.timestamp = Date.now();
-    }
-    
-    const response = await directus.request(readItems('testimonials', options));
+    const response = await directus.request(readItems('testimonials', {
+      limit: -1
+    }));
     return response as unknown as Testimonial[];
   } catch (error) {
     console.error('Error fetching testimonials:', error);
@@ -446,12 +418,7 @@ export async function getTestimonials(): Promise<Testimonial[]> {
 
 export async function getContactInfo(): Promise<ContactInfo | null> {
   try {
-    const options: any = {};
-    if (import.meta.env.DEV) {
-      options.timestamp = Date.now();
-    }
-    
-    const response = await directus.request(readItem('contact_info', 1, options));
+    const response = await directus.request(readItem('contact_info', 1));
     return response as unknown as ContactInfo;
   } catch (error) {
     console.error('Error fetching contact info:', error);
@@ -461,15 +428,10 @@ export async function getContactInfo(): Promise<ContactInfo | null> {
 
 export async function getPhilosophyItems(): Promise<PhilosophyItem[]> {
   try {
-    const options: any = {
+    const response = await directus.request(readItems('philosophy_items', {
       sort: ['order'],
-    };
-    
-    if (import.meta.env.DEV) {
-      options.timestamp = Date.now();
-    }
-    
-    const response = await directus.request(readItems('philosophy_items', options));
+      limit: -1
+    }));
     return response as unknown as PhilosophyItem[];
   } catch (error) {
     console.error('Error fetching philosophy items:', error);
