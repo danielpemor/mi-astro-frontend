@@ -89,7 +89,7 @@ export interface PhilosophyItem {
 }
 
 // URL de la API de Directus
-const directusUrl = 'http://localhost:8055';
+const directusUrl = import.meta.env.DIRECTUS_URL  || 'http://localhost:8055';
 
 // Cliente de Directus
 const directus = createDirectus(directusUrl).with(rest());
@@ -216,10 +216,10 @@ const mockData = {
 export function getAssetUrl(assetId: string | null | undefined): string {
   if (!assetId) return '/placeholder-food.jpg';
   
-  // Añadir timestamp para evitar caché en desarrollo
+  const baseUrl = import.meta.env.DIRECTUS_URL || 'http://localhost:8055';
   const cacheBuster = import.meta.env.DEV ? `?t=${Date.now()}` : '';
   
-  return `${directusUrl}/assets/${assetId}${cacheBuster}`;
+  return `${baseUrl}/assets/${assetId}${cacheBuster}`;
 }
 
 // Funciones para obtener datos de Directus con evitación de caché
