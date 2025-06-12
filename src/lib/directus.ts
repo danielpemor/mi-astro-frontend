@@ -89,7 +89,7 @@ export interface PhilosophyItem {
 }
 
 // URL de la API de Directus
-const directusUrl = import.meta.env.DIRECTUS_URL  || 'http://localhost:8055';
+const directusUrl = import.meta.env.DIRECTUS_URL || 'http://localhost:8055';
 
 // Cliente de Directus
 const directus = createDirectus(directusUrl).with(rest());
@@ -212,20 +212,77 @@ const mockData = {
   ]
 };
 
-// Función para obtener URL de assets
+// FUNCIONES CORREGIDAS PARA OBTENER ASSETS
+
+// Función principal para obtener URL de assets - CORREGIDA
 export function getAssetUrl(assetId: string | null | undefined): string {
   if (!assetId) return '/placeholder-food.jpg';
   
   const baseUrl = import.meta.env.DIRECTUS_URL || 'http://localhost:8055';
-  const cacheBuster = import.meta.env.DEV ? `?t=${Date.now()}` : '';
   
-  return `${baseUrl}/assets/${assetId}${cacheBuster}`;
+  // Intentar múltiples rutas posibles
+  return `${baseUrl}/files/${assetId}`;
+}
+
+// Función alternativa usando la API de archivos
+export async function getAssetInfo(assetId: string): Promise<any> {
+  try {
+    const response = await directus.request(readItem('directus_files', assetId));
+    return response;
+  } catch (error) {
+    console.error('Error fetching asset info:', error);
+    return null;
+  }
+}
+
+// Función para obtener URL con transformaciones
+export function getAssetUrlWithTransform(
+  assetId: string | null | undefined, 
+  width?: number, 
+  height?: number, 
+  quality: number = 80
+): string {
+  if (!assetId) return '/placeholder-food.jpg';
+  
+  const baseUrl = import.meta.env.DIRECTUS_URL || 'http://localhost:8055';
+  const params = new URLSearchParams();
+  
+  if (width) params.append('width', width.toString());
+  if (height) params.append('height', height.toString());
+  params.append('quality', quality.toString());
+  
+  const queryString = params.toString();
+  return `${baseUrl}/files/${assetId}${queryString ? `?${queryString}` : ''}`;
+}
+
+// Función de debugging para probar diferentes rutas
+export function getAssetUrlDebug(assetId: string | null | undefined): string[] {
+  if (!assetId) return [];
+  
+  const baseUrl = import.meta.env.DIRECTUS_URL || 'http://localhost:8055';
+  
+  return [
+    `${baseUrl}/files/${assetId}`,
+    `${baseUrl}/assets/${assetId}`,
+    `${baseUrl}/uploads/${assetId}`,
+    `${baseUrl}/api/files/${assetId}`,
+  ];
+}
+
+// Función para verificar si una imagen existe
+export async function checkAssetExists(assetId: string): Promise<boolean> {
+  try {
+    const response = await fetch(getAssetUrl(assetId), { method: 'HEAD' });
+    return response.ok;
+  } catch (error) {
+    console.error('Error checking asset:', error);
+    return false;
+  }
 }
 
 // Funciones para obtener datos de Directus con evitación de caché
 export async function getMenuCategories(): Promise<MenuCategory[]> {
   try {
-    // Añadir parámetro anti-caché en desarrollo
     const options: any = {
       sort: ['order'],
     };
@@ -252,7 +309,6 @@ export async function getMenuItems(categoryId: number | null = null): Promise<Me
       query.filter = { category: { id: { _eq: categoryId } } };
     }
     
-    // Añadir parámetro anti-caché en desarrollo
     if (import.meta.env.DEV) {
       query.timestamp = Date.now();
     }
@@ -267,7 +323,6 @@ export async function getMenuItems(categoryId: number | null = null): Promise<Me
 
 export async function getHeroSection(): Promise<HeroSection | null> {
   try {
-    // Añadir parámetro anti-caché en desarrollo
     const options: any = {};
     if (import.meta.env.DEV) {
       options.timestamp = Date.now();
@@ -283,7 +338,6 @@ export async function getHeroSection(): Promise<HeroSection | null> {
 
 export async function getGalleryImages(): Promise<GalleryImage[]> {
   try {
-    // Añadir parámetro anti-caché en desarrollo
     const options: any = {};
     if (import.meta.env.DEV) {
       options.timestamp = Date.now();
@@ -299,7 +353,6 @@ export async function getGalleryImages(): Promise<GalleryImage[]> {
 
 export async function getAboutUs(): Promise<AboutUs | null> {
   try {
-    // Añadir parámetro anti-caché en desarrollo
     const options: any = {};
     if (import.meta.env.DEV) {
       options.timestamp = Date.now();
@@ -315,7 +368,6 @@ export async function getAboutUs(): Promise<AboutUs | null> {
 
 export async function getOpeningHours(): Promise<OpeningHour[]> {
   try {
-    // Añadir parámetro anti-caché en desarrollo
     const options: any = {
       sort: ['day_of_week'],
     };
@@ -334,7 +386,6 @@ export async function getOpeningHours(): Promise<OpeningHour[]> {
 
 export async function getSiteSettings(): Promise<SiteSettings | null> {
   try {
-    // Añadir parámetro anti-caché en desarrollo
     const options: any = {};
     if (import.meta.env.DEV) {
       options.timestamp = Date.now();
@@ -350,7 +401,6 @@ export async function getSiteSettings(): Promise<SiteSettings | null> {
 
 export async function getSocialLinks(): Promise<SocialLink[]> {
   try {
-    // Añadir parámetro anti-caché en desarrollo
     const options: any = {};
     if (import.meta.env.DEV) {
       options.timestamp = Date.now();
@@ -366,7 +416,6 @@ export async function getSocialLinks(): Promise<SocialLink[]> {
 
 export async function getTestimonials(): Promise<Testimonial[]> {
   try {
-    // Añadir parámetro anti-caché en desarrollo
     const options: any = {};
     if (import.meta.env.DEV) {
       options.timestamp = Date.now();
@@ -382,7 +431,6 @@ export async function getTestimonials(): Promise<Testimonial[]> {
 
 export async function getContactInfo(): Promise<ContactInfo | null> {
   try {
-    // Añadir parámetro anti-caché en desarrollo
     const options: any = {};
     if (import.meta.env.DEV) {
       options.timestamp = Date.now();
@@ -398,7 +446,6 @@ export async function getContactInfo(): Promise<ContactInfo | null> {
 
 export async function getPhilosophyItems(): Promise<PhilosophyItem[]> {
   try {
-    // Añadir parámetro anti-caché en desarrollo
     const options: any = {
       sort: ['order'],
     };
