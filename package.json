@@ -8,6 +8,7 @@
     "astro": "astro"
   },
   "dependencies": {
+    "@astrojs/netlify": "^6.3.4",
     "@directus/sdk": "^19.1.0",
     "astro": "^5.7.13",
     "dotenv": "^16.5.0",
