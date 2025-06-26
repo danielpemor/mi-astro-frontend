@@ -89,36 +89,37 @@ export interface PhilosophyItem {
 }
 
 // URL de la API de Directus - CORREGIDA
-const directusUrl = import.meta.env.PUBLIC_DIRECTUS_URL || import.meta.env.DIRECTUS_URL || 'http://localhost:8055';
-
+const directusUrl = import.meta.env.PUBLIC_DIRECTUS_URL || 'http://localhost:8055';
 // Cliente de Directus
 const directus = createDirectus(directusUrl).with(rest());
 
 // FUNCIÓN PRINCIPAL PARA ASSETS - COMPLETAMENTE CORREGIDA
-export function getAssetUrl(
-  assetId: string | null | undefined,
-  params?: {
-    width?: number;
-    height?: number;
-    quality?: number;
-    fit?: 'cover' | 'contain' | 'inside' | 'outside';
-  }
-): string {
+export function getAssetUrl(assetId: string | null | undefined, params?: { 
+  width?: number; 
+  height?: number; 
+  quality?: number;
+  fit?: 'cover' | 'contain' | 'inside' | 'outside';
+}): string {
   if (!assetId) return '/placeholder-food.jpg';
-
-  const baseUrl =
-    import.meta.env.PUBLIC_DIRECTUS_URL ||
-    import.meta.env.DIRECTUS_URL ||
-    'http://localhost:8055';
-
-  const url = new URL(`${baseUrl.replace(/\/$/, '')}/assets/${assetId}`);
-
-  if (params?.width)   url.searchParams.set('width',   String(params.width));
-  if (params?.height)  url.searchParams.set('height',  String(params.height));
-  if (params?.quality) url.searchParams.set('quality', String(params.quality));
-  if (params?.fit)     url.searchParams.set('fit',     params.fit);
-
-  return url.toString();
+  
+  // Limpiar el asset ID por si viene con rutas extra
+  const cleanAssetId = assetId.toString().replace(/^.*\//, '');
+  
+  const baseUrl = directusUrl.replace(/\/$/, ''); // Remover slash final
+  
+  // Construir parámetros de transformación
+  const searchParams = new URLSearchParams();
+  if (params?.width) searchParams.append('width', params.width.toString());
+  if (params?.height) searchParams.append('height', params.height.toString());
+  if (params?.quality) searchParams.append('quality', params.quality.toString());
+  if (params?.fit) searchParams.append('fit', params.fit);
+  
+  const queryString = searchParams.toString();
+  
+  // Usar /files/ que es la ruta correcta para archivos públicos
+  const url = `${baseUrl}/files/${cleanAssetId}${queryString ? `?${queryString}` : ''}`;
+  
+  return url;
 }
 
 // Función para obtener URL con transformaciones específicas
