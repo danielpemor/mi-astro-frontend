@@ -104,34 +104,21 @@ export function getAssetUrl(
     fit?: 'cover' | 'contain' | 'inside' | 'outside';
   }
 ): string {
-  // DEBUG: Loggear qué está llegando
-  console.log('getAssetUrl called with:', { assetId, type: typeof assetId, params });
-  
-  // Verificar si assetId es válido
-  if (!assetId || assetId === '' || assetId === 'null' || assetId === 'undefined') {
-    console.warn('No valid assetId provided:', assetId);
-    return ''; // Retornar string vacío en lugar de placeholder
-  }
+  if (!assetId) return '/placeholder-food.jpg';
 
   const baseUrl =
     import.meta.env.PUBLIC_DIRECTUS_URL ||
     import.meta.env.DIRECTUS_URL ||
     'http://localhost:8055';
 
-  // Limpiar el assetId de posibles caracteres extraños
-  const cleanAssetId = String(assetId).trim();
-  
-  const url = new URL(`${baseUrl.replace(/\/$/, '')}/api/assets/${cleanAssetId}`);
+  const url = new URL(`${baseUrl.replace(/\/$/, '')}/assets/${assetId}`);
 
   if (params?.width)   url.searchParams.set('width',   String(params.width));
   if (params?.height)  url.searchParams.set('height',  String(params.height));
   if (params?.quality) url.searchParams.set('quality', String(params.quality));
   if (params?.fit)     url.searchParams.set('fit',     params.fit);
 
-  const finalUrl = url.toString();
-  console.log('Generated URL:', finalUrl);
-  
-  return finalUrl;
+  return url.toString();
 }
 
 // Función para obtener URL con transformaciones específicas
