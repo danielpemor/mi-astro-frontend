@@ -111,7 +111,8 @@ export function getAssetUrl(
     import.meta.env.DIRECTUS_URL ||
     'http://localhost:8055';
 
-  const url = new URL(`${baseUrl.replace(/\/$/, '')}/assets/${assetId}`);
+  // CAMBIO PRINCIPAL: Usar /api/assets/ según tu configuración
+  const url = new URL(`${baseUrl.replace(/\/$/, '')}/api/assets/${assetId}`);
 
   if (params?.width)   url.searchParams.set('width',   String(params.width));
   if (params?.height)  url.searchParams.set('height',  String(params.height));
@@ -172,15 +173,15 @@ export function debugAssetUrls(assetId: string): {
   const cleanId = assetId.toString().replace(/^.*\//, '');
   
   const attempted = [
-    `${baseUrl}/files/${cleanId}`,
-    `${baseUrl}/assets/${cleanId}`,
+    `${baseUrl}/api/assets/${cleanId}`,  // ✅ Esta es la correcta para tu setup
+    `${baseUrl}/files/${cleanId}`,       
+    `${baseUrl}/assets/${cleanId}`,      // ❌ La que estabas usando
     `${baseUrl}/uploads/${cleanId}`,
-    `${baseUrl}/api/files/${cleanId}`,
   ];
   
   return {
     attempted,
-    recommended: attempted[0] // /files/ es la correcta
+    recommended: attempted[0] // /api/assets/ es la correcta para tu setup
   };
 }
 
@@ -364,19 +365,6 @@ export async function getAboutUs(): Promise<AboutUs | null> {
   } catch (error) {
     console.error('Error fetching about us:', error);
     return mockData.aboutUs as AboutUs;
-  }
-}
-
-export async function getOpeningHours(): Promise<OpeningHour[]> {
-  try {
-    const response = await directus.request(readItems('opening_hours', {
-      sort: ['day_of_week'],
-      limit: -1
-    }));
-    return response as unknown as OpeningHour[];
-  } catch (error) {
-    console.error('Error fetching opening hours:', error);
-    return mockData.openingHours as unknown as OpeningHour[];
   }
 }
 

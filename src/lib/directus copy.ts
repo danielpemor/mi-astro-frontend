@@ -89,7 +89,8 @@ export interface PhilosophyItem {
 }
 
 // URL de la API de Directus - CORREGIDA
-const directusUrl = import.meta.env.PUBLIC_DIRECTUS_URL || 'http://localhost:8055';
+const directusUrl = import.meta.env.PUBLIC_DIRECTUS_URL || import.meta.env.DIRECTUS_URL || 'http://localhost:8055';
+
 // Cliente de Directus
 const directus = createDirectus(directusUrl).with(rest());
 
