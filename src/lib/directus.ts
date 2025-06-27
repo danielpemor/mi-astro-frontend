@@ -345,18 +345,15 @@ export async function getHeroSection(): Promise<HeroSection | null> {
   }
 }
 
-export async function getGalleryImages(): Promise<GalleryImage[]> {
-  try {
-    const response = await directus.request(readItems('gallery_images', {
-      limit: -1
-    }));
-    return response as unknown as GalleryImage[];
-  } catch (error) {
-    console.error('Error fetching gallery images:', error);
-    return mockData.galleryImages as unknown as GalleryImage[];
-  }
+export async function getGalleryImages() {
+  const resp = await directus.request(
+    readItems('gallery_images', { fields: ['id', 'alt_text', { image: ['id'] }], limit: -1 })
+  );
+  return (resp as any[]).map((g) => ({
+    ...g,
+    image: typeof g.image === 'object' ? g.image?.id : g.image,
+  }));
 }
-
 export async function getAboutUs(): Promise<AboutUs | null> {
   try {
     const response = await directus.request(readItem('about_us', 1));
