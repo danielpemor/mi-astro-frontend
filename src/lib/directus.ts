@@ -104,7 +104,7 @@ export function getAssetUrl(
     fit?: 'cover' | 'contain' | 'inside' | 'outside';
   }
 ): string {
-  if (!assetId) return '/placeholder-food.jpg';
+  if (!assetId) return '/placeholder-food1.jpg';
 
   const baseUrl =
     import.meta.env.PUBLIC_DIRECTUS_URL ||
