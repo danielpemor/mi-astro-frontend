@@ -104,7 +104,7 @@ export function getAssetUrl(
     fit?: 'cover' | 'contain' | 'inside' | 'outside';
   }
 ): string {
-  if (!assetId) return '/placeholder-food1.jpg';
+  if (!assetId) return '/placeholder-food.jpg';
 
   const baseUrl =
     import.meta.env.PUBLIC_DIRECTUS_URL ||
@@ -345,15 +345,18 @@ export async function getHeroSection(): Promise<HeroSection | null> {
 }
 
 export async function getGalleryImages(): Promise<GalleryImage[]> {
-  try {
-    const response = await directus.request(readItems('gallery_images', {
+  const response = await directus.request(
+    readItems('gallery_images', {
+      fields: ['id', 'alt_text', { image: ['id'] }], // ⬅ solo id
       limit: -1
-    }));
-    return response as unknown as GalleryImage[];
-  } catch (error) {
-    console.error('Error fetching gallery images:', error);
-    return mockData.galleryImages as unknown as GalleryImage[];
-  }
+    })
+  );
+
+  // Convierte image→string para el componente
+  return (response as any[]).map((img) => ({
+    ...img,
+    image: typeof img.image === 'object' ? img.image?.id : img.image
+  }));
 }
 
 export async function getAboutUs(): Promise<AboutUs | null> {
