@@ -28,9 +28,10 @@ export interface HeroSection {
   cta_link?: string;
 }
 
+// INTERFAZ CORREGIDA para imágenes de galería
 export interface GalleryImage {
   id: number;
-  image: string;
+  image: string | { id: string; filename_download: string } | any; // Más flexible para manejar diferentes estructuras
   alt_text?: string;
 }
 
@@ -88,15 +89,39 @@ export interface PhilosophyItem {
   order: number;
 }
 
-// URL de la API de Directus - CORREGIDA
+// URL de la API de Directus
 const directusUrl = import.meta.env.PUBLIC_DIRECTUS_URL || import.meta.env.DIRECTUS_URL || 'http://localhost:8055';
 
 // Cliente de Directus
 const directus = createDirectus(directusUrl).with(rest());
 
-// FUNCIÓN PRINCIPAL PARA ASSETS - COMPLETAMENTE CORREGIDA
+// FUNCIÓN MEJORADA PARA EXTRAER ID DE ASSET
+export function extractAssetId(asset: any): string | null {
+  if (!asset) return null;
+  
+  // Si es un string, asumimos que es el ID directo
+  if (typeof asset === 'string') {
+    return asset;
+  }
+  
+  // Si es un objeto, intentamos extraer el ID
+  if (typeof asset === 'object') {
+    // Directus puede devolver { id: "...", filename_download: "..." }
+    if (asset.id) return asset.id;
+    
+    // O puede ser solo el ID como string en algunas propiedades
+    if (asset.filename_download) return asset.id || asset.filename_download;
+    
+    // Fallback: convertir a string
+    return String(asset);
+  }
+  
+  return null;
+}
+
+// FUNCIÓN PRINCIPAL PARA ASSETS - MEJORADA
 export function getAssetUrl(
-  assetId: string | null | undefined,
+  asset: string | object | null | undefined,
   params?: {
     width?: number;
     height?: number;
@@ -104,14 +129,14 @@ export function getAssetUrl(
     fit?: 'cover' | 'contain' | 'inside' | 'outside';
   }
 ): string {
+  const assetId = extractAssetId(asset);
+  
   if (!assetId) return '/placeholder-food.jpg';
 
-  const baseUrl =
-    import.meta.env.PUBLIC_DIRECTUS_URL ||
-    import.meta.env.DIRECTUS_URL ||
-    'http://localhost:8055';
-
-  const url = new URL(`${baseUrl.replace(/\/$/, '')}/assets/${assetId}`);
+  const baseUrl = directusUrl.replace(/\/$/, '');
+  
+  // Usar /assets/ que es la ruta correcta para transformaciones
+  const url = new URL(`${baseUrl}/assets/${assetId}`);
 
   if (params?.width)   url.searchParams.set('width',   String(params.width));
   if (params?.height)  url.searchParams.set('height',  String(params.height));
@@ -121,23 +146,60 @@ export function getAssetUrl(
   return url.toString();
 }
 
+// FUNCIÓN ESPECÍFICA PARA IMÁGENES DE GALERÍA
+export function getGalleryImageUrl(
+  galleryImage: GalleryImage,
+  params?: {
+    width?: number;
+    height?: number;
+    quality?: number;
+    fit?: 'cover' | 'contain' | 'inside' | 'outside';
+  }
+): string {
+  return getAssetUrl(galleryImage.image, params);
+}
+
 // Función para obtener URL con transformaciones específicas
 export function getOptimizedImageUrl(
-  assetId: string | null | undefined,
+  asset: string | object | null | undefined,
   width?: number,
   height?: number,
   quality: number = 80
 ): string {
-  return getAssetUrl(assetId, { width, height, quality, fit: 'cover' });
+  return getAssetUrl(asset, { width, height, quality, fit: 'cover' });
+}
+
+// FUNCIÓN DE DEBUG MEJORADA PARA IMÁGENES DE GALERÍA
+export function debugGalleryImage(galleryImage: GalleryImage): {
+  rawImageData: any;
+  extractedId: string | null;
+  finalUrl: string;
+  possibleUrls: string[];
+} {
+  const assetId = extractAssetId(galleryImage.image);
+  const baseUrl = directusUrl.replace(/\/$/, '');
+  
+  const possibleUrls = assetId ? [
+    `${baseUrl}/assets/${assetId}`,
+    `${baseUrl}/files/${assetId}`,
+    `${baseUrl}/uploads/${assetId}`,
+  ] : [];
+  
+  return {
+    rawImageData: galleryImage.image,
+    extractedId: assetId,
+    finalUrl: getAssetUrl(galleryImage.image),
+    possibleUrls
+  };
 }
 
 // Función para verificar si una imagen existe y es accesible
-export async function verifyAssetUrl(assetId: string): Promise<{
+export async function verifyAssetUrl(asset: string | object): Promise<{
   exists: boolean;
   url: string;
   error?: string;
 }> {
-  const url = getAssetUrl(assetId);
+  const url = getAssetUrl(asset);
   
   try {
     const response = await fetch(url, { 
@@ -161,30 +223,7 @@ export async function verifyAssetUrl(assetId: string): Promise<{
   }
 }
 
-// Función de debug mejorada
-export function debugAssetUrls(assetId: string): {
-  attempted: string[];
-  recommended: string;
-} {
-  if (!assetId) return { attempted: [], recommended: '/placeholder-food.jpg' };
-  
-  const baseUrl = directusUrl.replace(/\/$/, '');
-  const cleanId = assetId.toString().replace(/^.*\//, '');
-  
-  const attempted = [
-    `${baseUrl}/files/${cleanId}`,
-    `${baseUrl}/assets/${cleanId}`,
-    `${baseUrl}/uploads/${cleanId}`,
-    `${baseUrl}/api/files/${cleanId}`,
-  ];
-  
-  return {
-    attempted,
-    recommended: attempted[0] // /files/ es la correcta
-  };
-}
-
-// Datos de ejemplo para fallback (mantengo los tuyos)
+// Datos de ejemplo para fallback
 const mockData = {
   menuCategories: [
     { id: 1, name: 'Entradas', order: 1 },
@@ -345,12 +384,24 @@ export async function getHeroSection(): Promise<HeroSection | null> {
   }
 }
 
+// FUNCIÓN MEJORADA PARA IMÁGENES DE GALERÍA
 export async function getGalleryImages(): Promise<GalleryImage[]> {
   try {
+    // Solicitar todos los campos incluyendo relaciones de imagen
     const response = await directus.request(readItems('gallery_images', {
+      fields: ['*', { image: ['id', 'filename_download', 'title'] }], // Incluir campos de imagen
       limit: -1
     }));
-    return response as unknown as GalleryImage[];
+    
+    const images = response as unknown as GalleryImage[];
+    
+    // Debug: Imprimir estructura de datos para entender el formato
+    if (images.length > 0) {
+      console.log('Primera imagen de galería:', images[0]);
+      console.log('Debug de primera imagen:', debugGalleryImage(images[0]));
+    }
+    
+    return images;
   } catch (error) {
     console.error('Error fetching gallery images:', error);
     return mockData.galleryImages as unknown as GalleryImage[];
