@@ -111,8 +111,7 @@ export function getAssetUrl(
     import.meta.env.DIRECTUS_URL ||
     'http://localhost:8055';
 
-  // 🔑 CAMBIO: /api/assets/ en lugar de /assets/
-  const url = new URL(`${baseUrl.replace(/\/$/, '')}/api/assets/${assetId}`);
+  const url = new URL(`${baseUrl.replace(/\/$/, '')}/assets/${assetId}`);
 
   if (params?.width)   url.searchParams.set('width',   String(params.width));
   if (params?.height)  url.searchParams.set('height',  String(params.height));
@@ -163,23 +162,25 @@ export async function verifyAssetUrl(assetId: string): Promise<{
 }
 
 // Función de debug mejorada
-export function createTestUrls(assetId: string): { [key: string]: string } {
-  if (!assetId) return {};
-
-  const baseUrl =
-    import.meta.env.PUBLIC_DIRECTUS_URL ||
-    import.meta.env.DIRECTUS_URL ||
-    'http://localhost:8055';
-
-  const cleanAssetId = String(assetId).replace(/^.*\//, '');
-  const base = baseUrl.replace(/\/$/, '');
-
+export function debugAssetUrls(assetId: string): {
+  attempted: string[];
+  recommended: string;
+} {
+  if (!assetId) return { attempted: [], recommended: '/placeholder-food.jpg' };
+  
+  const baseUrl = directusUrl.replace(/\/$/, '');
+  const cleanId = assetId.toString().replace(/^.*\//, '');
+  
+  const attempted = [
+    `${baseUrl}/files/${cleanId}`,
+    `${baseUrl}/assets/${cleanId}`,
+    `${baseUrl}/uploads/${cleanId}`,
+    `${baseUrl}/api/files/${cleanId}`,
+  ];
+  
   return {
-    'api-assets': `${base}/api/assets/${cleanAssetId}`,
-    'files': `${base}/files/${cleanAssetId}`,
-    'assets': `${base}/assets/${cleanAssetId}`,
-    'api-files': `${base}/api/files/${cleanAssetId}`,
-    'uploads': `${base}/uploads/${cleanAssetId}`,
+    attempted,
+    recommended: attempted[0] // /files/ es la correcta
   };
 }
 
@@ -345,18 +346,15 @@ export async function getHeroSection(): Promise<HeroSection | null> {
 }
 
 export async function getGalleryImages(): Promise<GalleryImage[]> {
-  const response = await directus.request(
-    readItems('gallery_images', {
-      fields: ['id', 'alt_text', { image: ['id'] }], // ⬅ solo id
+  try {
+    const response = await directus.request(readItems('gallery_images', {
       limit: -1
-    })
-  );
-
-  // Convierte image→string para el componente
-  return (response as any[]).map((img) => ({
-    ...img,
-    image: typeof img.image === 'object' ? img.image?.id : img.image
-  }));
+    }));
+    return response as unknown as GalleryImage[];
+  } catch (error) {
+    console.error('Error fetching gallery images:', error);
+    return mockData.galleryImages as unknown as GalleryImage[];
+  }
 }
 
 export async function getAboutUs(): Promise<AboutUs | null> {
