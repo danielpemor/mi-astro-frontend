@@ -106,12 +106,12 @@ export function getAssetUrl(
 ): string {
   if (!assetId) return '/placeholder-food.jpg';
 
-  const baseUrl =
-    import.meta.env.PUBLIC_DIRECTUS_URL ||
+  const base =
+    import.meta.env.PUBLIC_DIRECTUS_URL ||             // ➜ '/api' en Netlify
     import.meta.env.DIRECTUS_URL ||
     'http://localhost:8055';
 
-  const url = new URL(`${baseUrl.replace(/\/$/, '')}/assets/${assetId}`);
+  const url = new URL(`${base.replace(/\/$/, '')}/assets/${assetId}`);
 
   if (params?.width)   url.searchParams.set('width',   String(params.width));
   if (params?.height)  url.searchParams.set('height',  String(params.height));
@@ -173,7 +173,7 @@ export function debugAssetUrls(assetId: string): {
   
   const attempted = [
     `${baseUrl}/files/${cleanId}`,
-    `${baseUrl}api/assets/${cleanId}`,
+    `${baseUrl}/assets/${cleanId}`,
     `${baseUrl}/uploads/${cleanId}`,
     `${baseUrl}/api/files/${cleanId}`,
   ];
