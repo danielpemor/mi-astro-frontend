@@ -104,21 +104,34 @@ export function getAssetUrl(
     fit?: 'cover' | 'contain' | 'inside' | 'outside';
   }
 ): string {
-  if (!assetId) return '/placeholder-food.jpg';
+  // DEBUG: Loggear qué está llegando
+  console.log('getAssetUrl called with:', { assetId, type: typeof assetId, params });
+  
+  // Verificar si assetId es válido
+  if (!assetId || assetId === '' || assetId === 'null' || assetId === 'undefined') {
+    console.warn('No valid assetId provided:', assetId);
+    return ''; // Retornar string vacío en lugar de placeholder
+  }
 
   const baseUrl =
     import.meta.env.PUBLIC_DIRECTUS_URL ||
     import.meta.env.DIRECTUS_URL ||
     'http://localhost:8055';
 
-  const url = new URL(`${baseUrl.replace(/\/$/, '')}/assets/${assetId}`);
+  // Limpiar el assetId de posibles caracteres extraños
+  const cleanAssetId = String(assetId).trim();
+  
+  const url = new URL(`${baseUrl.replace(/\/$/, '')}/api/assets/${cleanAssetId}`);
 
   if (params?.width)   url.searchParams.set('width',   String(params.width));
   if (params?.height)  url.searchParams.set('height',  String(params.height));
   if (params?.quality) url.searchParams.set('quality', String(params.quality));
   if (params?.fit)     url.searchParams.set('fit',     params.fit);
 
-  return url.toString();
+  const finalUrl = url.toString();
+  console.log('Generated URL:', finalUrl);
+  
+  return finalUrl;
 }
 
 // Función para obtener URL con transformaciones específicas
