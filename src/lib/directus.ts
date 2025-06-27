@@ -173,7 +173,7 @@ export function debugAssetUrls(assetId: string): {
   
   const attempted = [
     `${baseUrl}/files/${cleanId}`,
-    `${baseUrl}/assets/${cleanId}`,
+    `${baseUrl}api/assets/${cleanId}`,
     `${baseUrl}/uploads/${cleanId}`,
     `${baseUrl}/api/files/${cleanId}`,
   ];
