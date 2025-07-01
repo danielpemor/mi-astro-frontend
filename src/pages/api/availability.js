@@ -1,6 +1,11 @@
 // src/pages/api/availability.js
 export const prerender = false;
 
+const DIRECTUS_URL = 
+  process.env.DIRECTUS_URL ||
+  process.env.PUBLIC_DIRECTUS_URL ||
+  'http://localhost:8055';
+
 // Misma configuración que en reservations.js
 const CAPACIDAD_MAXIMA = {
   '10:00': 1,
@@ -54,10 +59,7 @@ export async function GET({ url }) {
       });
     }
     
-    const DIRECTUS_URL = 
-    process.env.DIRECTUS_URL ||
-    process.env.PUBLIC_DIRECTUS_URL ||
-    'http://localhost:8055';
+    const directusUrl = 'http://localhost:8055';
     
     // Obtener todas las reservas para la fecha
     const checkUrl = `${directusUrl}/items/reservas?filter[fecha][_eq]=${fecha}&filter[estado][_neq]=cancelada`;
