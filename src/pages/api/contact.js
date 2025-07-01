@@ -2,7 +2,8 @@
 export const prerender = false;
 
 // Configuración de Directus
-const DIRECTUS_URL = process.env.DIRECTUS_URL || 'http://localhost:8055';
+const DIRECTUS_URL =
+  process.env.PUBLIC_DIRECTUS_URL || 'http://localhost:8055';
 
 // Headers básicos (sin autenticación - para endpoints públicos)
 const getHeaders = () => {
