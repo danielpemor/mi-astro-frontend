@@ -54,7 +54,10 @@ export async function GET({ url }) {
       });
     }
     
-    const directusUrl = 'http://localhost:8055';
+    const DIRECTUS_URL = 
+    process.env.DIRECTUS_URL ||
+    process.env.PUBLIC_DIRECTUS_URL ||
+    'http://localhost:8055';
     
     // Obtener todas las reservas para la fecha
     const checkUrl = `${directusUrl}/items/reservas?filter[fecha][_eq]=${fecha}&filter[estado][_neq]=cancelada`;
