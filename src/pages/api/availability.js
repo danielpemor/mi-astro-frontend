@@ -1,12 +1,12 @@
-// src/pages/api/availability.js
 export const prerender = false;
 
-const DIRECTUS_URL = 
+// Configuración de Directus: soporte para env variable
+const DIRECTUS_URL =
   process.env.DIRECTUS_URL ||
   process.env.PUBLIC_DIRECTUS_URL ||
   'http://localhost:8055';
 
-// Misma configuración que en reservations.js
+// Capacidad máxima por horario (ajusta según tu restaurante)
 const CAPACIDAD_MAXIMA = {
   '10:00': 1,
   '10:30': 20,
@@ -28,7 +28,7 @@ const CAPACIDAD_MAXIMA = {
   '22:00': 20
 };
 
-// Función para extraer hora de datetime
+// Función para extraer hora desde datetime
 function extractHoraFromDateTime(fechaHora) {
   if (!fechaHora) return null;
   try {
@@ -44,76 +44,71 @@ function extractHoraFromDateTime(fechaHora) {
 
 export async function GET({ url }) {
   console.log('=== API Availability llamada ===');
-  
+  console.log('DIRECTUS_URL:', DIRECTUS_URL);
+
   try {
     const searchParams = new URL(url).searchParams;
     const fecha = searchParams.get('fecha');
     const personas = parseInt(searchParams.get('personas')) || 1;
-    
+
     if (!fecha) {
       return new Response(JSON.stringify({
-        error: 'Parámetro fecha es requerido'
+        error: 'Parámetro "fecha" es requerido'
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' },
       });
     }
-    
-    const directusUrl = 'http://localhost:8055';
-    
-    // Obtener todas las reservas para la fecha
-    const checkUrl = `${directusUrl}/items/reservas?filter[fecha][_eq]=${fecha}&filter[estado][_neq]=cancelada`;
-    console.log('Consultando disponibilidad:', checkUrl);
-    
+
+    // Obtener reservas para esa fecha (excepto canceladas)
+    const checkUrl = `${DIRECTUS_URL}/items/reservas?filter[fecha][_eq]=${fecha}&filter[estado][_neq]=cancelada&limit=-1`;
+    console.log('Consultando disponibilidad en:', checkUrl);
+
     const response = await fetch(checkUrl, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
     });
-    
+
     if (!response.ok) {
-      throw new Error('Error al consultar reservas existentes');
+      throw new Error(`Error al consultar Directus: ${response.status} ${response.statusText}`);
     }
-    
+
     const reservasData = await response.json();
-    console.log('Reservas encontradas:', reservasData.data?.length || 0);
-    
+    const reservas = reservasData.data || [];
+    console.log(`Reservas encontradas: ${reservas.length}`);
+
     // Agrupar reservas por hora
     const reservasPorHora = {};
-    if (reservasData.data && Array.isArray(reservasData.data)) {
-      reservasData.data.forEach(reserva => {
-        const hora = reserva.hora || extractHoraFromDateTime(reserva.fecha_hora);
-        if (hora) {
-          if (!reservasPorHora[hora]) {
-            reservasPorHora[hora] = 0;
-          }
-          reservasPorHora[hora] += parseInt(reserva.personas || 1);
-        }
-      });
+    for (const reserva of reservas) {
+      const hora = reserva.hora || extractHoraFromDateTime(reserva.fecha_hora);
+      if (!hora) continue;
+      if (!reservasPorHora[hora]) reservasPorHora[hora] = 0;
+      reservasPorHora[hora] += parseInt(reserva.personas || 1);
     }
-    
-    console.log('Reservas por hora:', reservasPorHora);
-    
+
     // Calcular disponibilidad por horario
     const disponibilidad = {};
-    Object.keys(CAPACIDAD_MAXIMA).forEach(hora => {
+    for (const hora of Object.keys(CAPACIDAD_MAXIMA)) {
       const capacidadMaxima = CAPACIDAD_MAXIMA[hora];
       const personasReservadas = reservasPorHora[hora] || 0;
       const espaciosDisponibles = capacidadMaxima - personasReservadas;
       const disponibleParaGrupo = espaciosDisponibles >= personas;
-      
+
       disponibilidad[hora] = {
         capacidadMaxima,
         personasReservadas,
         espaciosDisponibles,
         disponibleParaGrupo,
-        porcentajeOcupacion: (personasReservadas / capacidadMaxima * 100).toFixed(1),
-        estado: espaciosDisponibles === 0 ? 'lleno' : 
-                espaciosDisponibles < personas ? 'insuficiente' : 'disponible'
+        porcentajeOcupacion: ((personasReservadas / capacidadMaxima) * 100).toFixed(1),
+        estado:
+          espaciosDisponibles === 0
+            ? 'lleno'
+            : espaciosDisponibles < personas
+            ? 'insuficiente'
+            : 'disponible'
       };
-    });
-    
+    }
+
     return new Response(JSON.stringify({
       fecha,
       personasSolicitadas: personas,
@@ -122,7 +117,7 @@ export async function GET({ url }) {
         totalHorarios: Object.keys(CAPACIDAD_MAXIMA).length,
         horariosDisponibles: Object.values(disponibilidad).filter(h => h.disponibleParaGrupo).length,
         horariosLlenos: Object.values(disponibilidad).filter(h => h.espaciosDisponibles === 0).length,
-        horariosInsuficientes: Object.values(disponibilidad).filter(h => 
+        horariosInsuficientes: Object.values(disponibilidad).filter(h =>
           h.espaciosDisponibles > 0 && h.espaciosDisponibles < personas
         ).length
       }
@@ -130,10 +125,9 @@ export async function GET({ url }) {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
-    
+
   } catch (error) {
     console.error('Error en API Availability:', error);
-    
     return new Response(JSON.stringify({
       error: 'Error al verificar disponibilidad',
       message: error.message
