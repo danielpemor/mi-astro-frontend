@@ -1,16 +1,17 @@
 [[redirects]]
-  from = "/api/*"
-  to   = "http://68.168.216.251:8055/:splat"
-  status = 200
-  force  = true
+from = "/api/assets/*"
+to = "http://68.168.216.251:8055/assets/:splat"
+status = 200
+force = true
 
 [[redirects]]
-  from   = "/api/items/*"
-  to     = "http://68.168.216.251:8055/items/:splat"
-  status = 200
-  force  = true
-  
+from = "/api/items/*"
+to = "http://68.168.216.251:8055/items/:splat"
+status = 200
+force = true
+
+# (Opcional) fallback si usas SPA
 [[redirects]]
-  from = "/*"
-  to   = "/index.html"
-  status = 200
+from = "/*"
+to = "/index.html"
+status = 200
