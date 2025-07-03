@@ -258,61 +258,117 @@ const openingHours = await getOpeningHours();
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  const form      = document.getElementById('reservationForm');
-  const fechaEl   = document.getElementById('fecha');
-  const horaEl    = document.getElementById('hora');
-  const personasEl= document.getElementById('personas');
+  const form        = document.getElementById('reservationForm');
+  const submitBtn   = document.getElementById('submitBtn');
+  const fechaEl     = document.getElementById('fecha');
+  const horaEl      = document.getElementById('hora');
+  const personasEl  = document.getElementById('personas');
 
-  async function actualizarHorarios() {
-    const fecha     = fechaEl.value;
-    const personas  = personasEl.value || 1;
+  /* -------------------------------------------------- */
+  /* 1.  CARGAR HORARIOS DISPONIBLES                    */
+  /* -------------------------------------------------- */
+  async function cargarHorarios() {
+    const fecha    = fechaEl.value;
     if (!fecha) return;
 
-    try {
-      const res = await fetch(`/api/availability?fecha=${fecha}&personas=${personas}`);
-      const data = await res.json();
-      const horarios = data.horarios || {};
+    // personas=1 da la disponibilidad global
+    const res      = await fetch(`/api/availability?fecha=${fecha}&personas=1`);
+    const data     = await res.json();
+    const horarios = data.horarios || {};
 
-      // Hora actual sólo si la fecha seleccionada es hoy
-      const ahora   = new Date();
-      const esHoy   = fecha === ahora.toISOString().slice(0,10);
-      const minutosActuales = ahora.getHours()*60 + ahora.getMinutes();
+    // Hora actual solo si la fecha es hoy (zona horaria MX)
+    const ahoraMX  = new Date().toLocaleString('en-US', {timeZone:'America/Mexico_City'});
+    const ahora    = new Date(ahoraMX);
+    const esHoy    = fecha === ahora.toISOString().slice(0,10);
+    const minutosAhora = ahora.getHours()*60 + ahora.getMinutes();
 
-      // Recorrer todas las opciones del <select hora>
-      [...horaEl.options].forEach(opt => {
-        if (!opt.value) return;            // “Selecciona una hora”
-        const h        = opt.value;        // "10:30"
-        const info     = horarios[h] || {};
-        const [hh,mm]  = h.split(':').map(Number);
-        const minutosH = hh*60 + mm;
+    // Vaciar selector hora
+    horaEl.innerHTML =
+      `<option value="">Selecciona una hora</option>`;
 
-        const agotado  = info.estado === 'lleno' || info.estado === 'insuficiente';
-        const pasada   = esHoy && minutosH <= minutosActuales;
+    // Rellenar SOLO las horas disponibles
+    Object.entries(horarios).forEach(([h, info]) => {
+      const [hh, mm]  = h.split(':').map(Number);
+      const minH      = hh*60 + mm;
+      const pasada    = esHoy && minH <= minutosAhora;
+      const sinLugar  = info.espaciosDisponibles === 0;
 
-        opt.disabled   = agotado || pasada;
-        opt.textContent = pasada
-          ? `${h} — pasada`
-          : agotado
-          ? `${h} — no disponible`
-          : h;
-      });
-    } catch(err){
-      console.error('Error availability:', err);
+      if (pasada || sinLugar) return;          // se oculta (no disabled)
+
+      const opt  = document.createElement('option');
+      opt.value  = h;
+      opt.textContent = h;
+      opt.dataset.max = info.espaciosDisponibles;  // guardamos cupo
+      horaEl.appendChild(opt);
+    });
+
+    // Reiniciar selects
+    horaEl.value      = '';
+    personasEl.innerHTML = '<option value="">Selecciona</option>';
+  }
+
+  /* -------------------------------------------------- */
+  /* 2.  ACTUALIZAR PERSONAS SEGÚN HORA SELECCIONADA    */
+  /* -------------------------------------------------- */
+  function actualizarPersonasSegunHora() {
+    const opcion = horaEl.selectedOptions[0];
+    if (!opcion) return;
+
+    const max = parseInt(opcion.dataset.max || '1', 10);
+
+    // reconstruir <select personas> dinámicamente
+    let htmlPers = '<option value="">Selecciona</option>';
+    for (let i = 1; i <= max; i++) {
+      htmlPers += `<option value="${i}">${i} persona${i>1?'s':''}</option>`;
+    }
+    personasEl.innerHTML = htmlPers;
+
+    // si el usuario ya había seleccionado algo mayor, recórtalo
+    if (parseInt(personasEl.value || '0', 10) > max) {
+      personasEl.value = String(max);
     }
   }
 
-  // Cuando cambia fecha o personas, refrescar horarios
-  fechaEl.addEventListener('change', actualizarHorarios);
-  personasEl.addEventListener('change', actualizarHorarios);
+  /* -------------------------------------------------- */
+  /* 3.  LISTENERS                                      */
+  /* -------------------------------------------------- */
+  fechaEl.addEventListener('change',  cargarHorarios);
+  horaEl .addEventListener('change',  actualizarPersonasSegunHora);
 
-  // Si cambia la hora elegida, ajustar max de personas
-  horaEl.addEventListener('change', () => {
-    const h = horaEl.value;
-    const optInfo = [...horaEl.options].find(o=>o.value===h)?.dataset.max;
-    if (optInfo) personasEl.max = optInfo;
+  /* -------------  ENVÍO DE FORMULARIO  -------------- */
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    submitBtn.disabled  = true;
+    submitBtn.textContent = 'Enviando…';
+
+    const fd = new FormData(form);
+    const body = Object.fromEntries(fd.entries());
+
+    try {
+      const r = await fetch('/api/reservations', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify(body)
+      });
+
+      const data = await r.json();
+      if (r.ok) {
+        alert('¡Reserva recibida! Te confirmaremos pronto.');
+        form.reset();
+      } else {
+        alert(data.message || 'No fue posible reservar.');
+      }
+    } catch(err) {
+      alert('Error de red. Intenta de nuevo.');
+    } finally {
+      submitBtn.disabled  = false;
+      submitBtn.textContent = 'Confirmar reserva';
+    }
   });
 
-  // Primera carga si ya hay fecha pre‑seleccionada
-  if (fechaEl.value) actualizarHorarios();
+  /* Precarga si el date ya viene con valor (navegadores cache) */
+  if (fechaEl.value) cargarHorarios();
 });
 </script>
+
