@@ -1,6 +1,8 @@
 ---
+// src/pages/reservations.astro
 import DefaultLayout from '../layouts/DefaultLayout.astro';
 import { getOpeningHours } from '../lib/directus';
+
 
 const openingHours = await getOpeningHours();
 ---
@@ -193,17 +195,20 @@ const openingHours = await getOpeningHours();
 </DefaultLayout>
 
 <script>
+  // Formulario de reservación
   document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('reservationForm');
     const submitBtn = document.getElementById('submitBtn');
-
+    
     if (form) {
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
-
+        
+        // Deshabilitar el botón durante el envío
         submitBtn.disabled = true;
         submitBtn.textContent = 'Enviando...';
-
+        
+        // Obtener datos del formulario
         const formData = new FormData(form);
         const reservationData = {
           nombre: formData.get('nombre'),
@@ -214,28 +219,100 @@ const openingHours = await getOpeningHours();
           personas: formData.get('personas'),
           comentarios: formData.get('comentarios') || null
         };
-
+        
+        console.log('Enviando datos de reserva:', reservationData);
+        
         try {
+          // Usar la API route de Astro en lugar de llamar directamente a Directus
           const response = await fetch('/api/reservations', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+            },
             body: JSON.stringify(reservationData)
           });
-
+          
+          console.log('Respuesta del servidor:', response);
+          
           if (response.ok) {
+            const result = await response.json();
+            console.log('Reserva creada:', result);
             alert('¡Reserva recibida con éxito! Te contactaremos para confirmar tu reserva.');
             form.reset();
           } else {
             const errorData = await response.json();
-            alert(errorData.message || 'Error al enviar la reserva.');
+            console.error('Error al enviar reserva:', errorData);
+            alert('El horario seleccionado ya alcanzo el limite de su capacidad.');
           }
         } catch (error) {
-          alert('Error de conexión. Por favor, verifica tu conexión e inténtalo de nuevo.');
+          console.error('Error de red:', error);
+          alert('Error de conexión. Por favor, verifica tu conexión a internet e inténtalo de nuevo.');
         } finally {
+          // Rehabilitar el botón
           submitBtn.disabled = false;
           submitBtn.textContent = 'Confirmar reserva';
         }
       });
     }
   });
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const form      = document.getElementById('reservationForm');
+  const fechaEl   = document.getElementById('fecha');
+  const horaEl    = document.getElementById('hora');
+  const personasEl= document.getElementById('personas');
+
+  async function actualizarHorarios() {
+    const fecha     = fechaEl.value;
+    const personas  = personasEl.value || 1;
+    if (!fecha) return;
+
+    try {
+      const res = await fetch(`/api/availability?fecha=${fecha}&personas=${personas}`);
+      const data = await res.json();
+      const horarios = data.horarios || {};
+
+      // Hora actual sólo si la fecha seleccionada es hoy
+      const ahora   = new Date();
+      const esHoy   = fecha === ahora.toISOString().slice(0,10);
+      const minutosActuales = ahora.getHours()*60 + ahora.getMinutes();
+
+      // Recorrer todas las opciones del <select hora>
+      [...horaEl.options].forEach(opt => {
+        if (!opt.value) return;            // “Selecciona una hora”
+        const h        = opt.value;        // "10:30"
+        const info     = horarios[h] || {};
+        const [hh,mm]  = h.split(':').map(Number);
+        const minutosH = hh*60 + mm;
+
+        const agotado  = info.estado === 'lleno' || info.estado === 'insuficiente';
+        const pasada   = esHoy && minutosH <= minutosActuales;
+
+        opt.disabled   = agotado || pasada;
+        opt.textContent = pasada
+          ? `${h} — pasada`
+          : agotado
+          ? `${h} — no disponible`
+          : h;
+      });
+    } catch(err){
+      console.error('Error availability:', err);
+    }
+  }
+
+  // Cuando cambia fecha o personas, refrescar horarios
+  fechaEl.addEventListener('change', actualizarHorarios);
+  personasEl.addEventListener('change', actualizarHorarios);
+
+  // Si cambia la hora elegida, ajustar max de personas
+  horaEl.addEventListener('change', () => {
+    const h = horaEl.value;
+    const optInfo = [...horaEl.options].find(o=>o.value===h)?.dataset.max;
+    if (optInfo) personasEl.max = optInfo;
+  });
+
+  // Primera carga si ya hay fecha pre‑seleccionada
+  if (fechaEl.value) actualizarHorarios();
+});
 </script>
