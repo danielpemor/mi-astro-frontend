@@ -229,11 +229,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const opt = horaEl.selectedOptions[0];
     if (!opt) return;
 
-    const max = parseInt(opt.dataset.max || '1', 10);
+    const cupoReal = parseInt(opt.dataset.max || '1', 10);
+    const cupoMax  = Math.min(cupoReal, 8);   // nunca más de 8
+
+    // reconstruir selector personas
     let html = '<option value="">Selecciona</option>';
-    for (let i=1;i<=max;i++) html += `<option value="${i}">${i} persona${i>1?'s':''}</option>`;
+    for (let i = 1; i <= cupoMax; i++) {
+      html += `<option value="${i}">${i} persona${i > 1 ? 's' : ''}</option>`;
+    }
     personasEl.innerHTML = html;
-    avisoCupo.textContent = `Quedan ${max} lugar${max>1?'es':''} disponibles.`;
+
+    // mostrar aviso con el cupo REAL (aunque el selector se limite a 8)
+    avisoCupo.textContent = `Quedan ${cupoReal} lugar${cupoReal > 1 ? 'es' : ''} disponibles.`;
   }
 
   // ---------- Envío formulario ----------
