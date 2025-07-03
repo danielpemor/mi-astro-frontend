@@ -3,6 +3,7 @@
 import DefaultLayout from '../layouts/DefaultLayout.astro';
 import { getOpeningHours } from '../lib/directus';
 
+
 const openingHours = await getOpeningHours();
 ---
 
@@ -254,4 +255,112 @@ const openingHours = await getOpeningHours();
       });
     }
   });
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const form        = document.getElementById('reservationForm');
+  const fechaEl     = document.getElementById('fecha');
+  const horaEl      = document.getElementById('hora');
+  const personasEl  = document.getElementById('personas');
+  const avisoCupo   = document.getElementById('avisoCupo');
+  const submitBtn   = document.getElementById('submitBtn');
+
+  /* ---------- helpers ---------- */
+  const hoyISO = new Date().toISOString().slice(0,10);
+  const minHoy = new Date().getHours() * 60 + new Date().getMinutes();
+
+  /* ---------- carga / refresca horarios ---------- */
+  async function refrescarHorarios() {
+    const fecha = fechaEl.value;
+    if (!fecha) return;
+
+    // Traer disponibilidad global (personas=1)
+    const res  = await fetch(`/api/availability?fecha=${fecha}&personas=1`);
+    const data = await res.json();
+    const horarios = data.horarios || {};
+
+    // limpiar selector hora
+    const opcionesBase = horaEl.querySelectorAll('option[value]');
+    opcionesBase.forEach(opt => {
+      opt.hidden = true;          // mostrar todas
+      opt.dataset.max = '0';       // reset
+    });
+
+    // Iterar y ocultar las no válidas
+    opcionesBase.forEach(opt => {
+      const h = opt.value;             // "11:30"
+      const info = horarios[h];
+      if (!info) { opt.hidden = true; return; }
+
+      const llena  = info.espaciosDisponibles === 0;
+      const pasada = (fecha === hoyISO) &&
+        ((+h.split(':')[0] * 60 + +h.split(':')[1]) <= minHoy);
+
+      if (llena || pasada) {
+        opt.hidden = true;             // no aparece en la lista
+      } else {
+        opt.dataset.max = info.espaciosDisponibles;   // guarda cupo
+      }
+    });
+
+    horaEl.value = '';                // reinicia selección
+    personasEl.innerHTML = '<option value="">Selecciona</option>';
+    avisoCupo.textContent = '';
+  }
+
+  /* ---------- cuando eligen hora ---------- */
+  function onHoraChange() {
+    const optSel = horaEl.selectedOptions[0];
+    if (!optSel) return;
+
+    const max = parseInt(optSel.dataset.max || '1', 10);
+
+    // reconstruir selector personas
+    let html = '<option value="">Selecciona</option>';
+    for (let i = 1; i <= max; i++) {
+      html += `<option value="${i}">${i} persona${i>1?'s':''}</option>`;
+    }
+    personasEl.innerHTML = html;
+
+    avisoCupo.textContent = `Quedan ${max} lugar${max>1?'es':''} disponibles.`;
+  }
+
+  /* ---------- listeners ---------- */
+  fechaEl.addEventListener('change', refrescarHorarios);
+  horaEl .addEventListener('change', onHoraChange);
+
+  /* ---------- envío del formulario ---------- */
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Enviando…';
+
+    const datos = Object.fromEntries(new FormData(form).entries());
+
+    try {
+      const r = await fetch('/api/reservations', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(datos)
+      });
+      const j = await r.json();
+      if (r.ok) {
+        alert('Reserva recibida, te confirmaremos pronto 😊');
+        form.reset();
+        avisoCupo.textContent = '';
+      } else {
+        alert(j.message || 'No fue posible reservar.');
+      }
+    } catch {
+      alert('Error de conexión, inténtalo de nuevo.');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Confirmar reserva';
+    }
+  });
+
+  /* cargamos horarios si la fecha ya tiene valor (autocompletado del navegador) */
+  if (fechaEl.value) refrescarHorarios();
+});
 </script>
