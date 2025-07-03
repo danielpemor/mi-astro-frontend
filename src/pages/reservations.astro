@@ -183,15 +183,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const avisoCupo   = document.getElementById('avisoCupo');
   const submitBtn   = document.getElementById('submitBtn');
 
-  // ---------- Helpers fecha/hora ----------
+  /* --- helpers --- */
   const hoyISO = new Date().toISOString().slice(0,10);
+  const minutos = hs => { const [h,m]=hs.split(':').map(Number); return h*60+m; };
 
-  function minutos(horaStr) {
-    const [h, m] = horaStr.split(':').map(Number);
-    return h * 60 + m;
-  }
+  // guardaremos un mapa hora -> cupoReal
+  let cupoPorHora = {};
 
-  // ---------- Cargar horarios disponibles ----------
+  /* ---------- cargar horarios según fecha ---------- */
   async function refrescarHorarios() {
     const fecha = fechaEl.value;
     if (!fecha) return;
@@ -200,23 +199,27 @@ document.addEventListener('DOMContentLoaded', () => {
     const data = await res.json();
     const horarios = data.horarios || {};
 
-    // hora actual (MX) si la fecha es hoy
-    const ahora = new Date().toLocaleString('en-US', { timeZone:'America/Mexico_City' });
+    cupoPorHora = {};                              // reiniciar mapa
+
+    // hora actual MX si es hoy
+    const ahora = new Date().toLocaleString('en-US',{timeZone:'America/Mexico_City'});
     const ahoraMin = minutos(new Date(ahora).toTimeString().slice(0,5));
     const esHoy    = fecha === hoyISO;
 
     // reset selector hora
     const opts = horaEl.querySelectorAll('option[value]');
     opts.forEach(opt => {
-      const h   = opt.value;
-      const info= horarios[h];
+      const h = opt.value;
+      const info = horarios[h];
       if (!info) { opt.hidden = true; return; }
 
       const pasada = esHoy && minutos(h) <= ahoraMin;
-      const sinEsp = info.espaciosDisponibles === 0;
+      const sinLugar = info.espaciosDisponibles === 0;
 
-      opt.hidden     = pasada || sinEsp;
-      opt.dataset.max= info.espaciosDisponibles;
+      opt.hidden = pasada || sinLugar;
+      if (!opt.hidden) {
+        cupoPorHora[h] = info.espaciosDisponibles; // guarda cupo real
+      }
     });
 
     horaEl.value = '';
@@ -224,42 +227,63 @@ document.addEventListener('DOMContentLoaded', () => {
     avisoCupo.textContent = '';
   }
 
-  // ---------- Al cambiar hora ----------
-  function onHoraChange() {
-    const opt = horaEl.selectedOptions[0];
-    if (!opt) return;
-
-    const cupoReal = parseInt(opt.dataset.max || '1', 10);
-    const cupoMax  = Math.min(cupoReal, 8);   // nunca más de 8
-
-    // reconstruir selector personas
+  /* ---------- construir selector personas ---------- */
+  function construirPersonas(max) {
+    const limite = Math.min(max, 8);               // tope absoluto 8
     let html = '<option value="">Selecciona</option>';
-    for (let i = 1; i <= cupoMax; i++) {
-      html += `<option value="${i}">${i} persona${i > 1 ? 's' : ''}</option>`;
+    for (let i = 1; i <= limite; i++) {
+      html += `<option value="${i}">${i} persona${i>1?'s':''}</option>`;
     }
     personasEl.innerHTML = html;
-
-    // mostrar aviso con el cupo REAL (aunque el selector se limite a 8)
-    avisoCupo.textContent = `Quedan ${cupoReal} lugar${cupoReal > 1 ? 'es' : ''} disponibles.`;
   }
 
-  // ---------- Envío formulario ----------
-  form.addEventListener('submit', async (e) => {
+  /* ---------- al cambiar hora ---------- */
+  function onHoraChange() {
+    const h = horaEl.value;
+    if (!h) { avisoCupo.textContent=''; return; }
+
+    const cupoReal = cupoPorHora[h] || 1;
+    construirPersonas(cupoReal);
+
+    avisoCupo.textContent =
+      `Quedan ${cupoReal} lugar${cupoReal>1?'es':''} disponibles.`;
+  }
+
+  /* ---------- al cambiar personas ---------- */
+  function onPersonasChange() {
+    const h = horaEl.value;
+    if (!h) return;
+
+    const cupoReal = cupoPorHora[h] || 1;
+    const sel = parseInt(personasEl.value || '0', 10);
+
+    // si usuario elige más del disponible, recortamos
+    if (sel > cupoReal) {
+      personasEl.value = cupoReal;
+    }
+
+    const quedan = cupoReal - (parseInt(personasEl.value||'0',10) || 0);
+    avisoCupo.textContent =
+      `Quedan ${quedan} lugar${quedan!==1?'es':''} disponibles.`;
+  }
+
+  /* ---------- envío del formulario ---------- */
+  form.addEventListener('submit', async e => {
     e.preventDefault();
     submitBtn.disabled = true;
     submitBtn.textContent = 'Enviando…';
 
-    const body = Object.fromEntries(new FormData(form).entries());
+    const datos = Object.fromEntries(new FormData(form).entries());
 
     try {
       const r = await fetch('/api/reservations', {
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body: JSON.stringify(body)
+        body: JSON.stringify(datos)
       });
       const j = await r.json();
       if (r.ok) {
-        alert('¡Reserva recibida! Te contactaremos pronto.');
+        alert('¡Reserva recibida! Te confirmaremos pronto.');
         form.reset();
         avisoCupo.textContent = '';
       } else {
@@ -273,9 +297,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  /* listeners */
   fechaEl.addEventListener('change', refrescarHorarios);
   horaEl .addEventListener('change', onHoraChange);
+  personasEl.addEventListener('change', onPersonasChange);
 
+  /* inicial si el date ya trae valor */
   if (fechaEl.value) refrescarHorarios();
 });
 </script>
