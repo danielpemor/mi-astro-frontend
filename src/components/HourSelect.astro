@@ -1,0 +1,67 @@
+---
+// src/components/HourSelect.astro
+import { useState, useEffect } from 'react';
+
+// Props: fecha seleccionada y personas
+const { fecha, personas = 1, onSelect } = Astro.props;
+
+const [horarios, setHorarios] = useState({});
+const [horaElegida, setHoraElegida] = useState('');
+
+useEffect(async () => {
+  if (!fecha) return;
+
+  const res = await fetch(`/api/availability?fecha=${fecha}&personas=${personas}`);
+  const data = await res.json();
+  setHorarios(data.horarios || {});
+}, [fecha, personas]);
+
+function isPasada(hora) {
+  // Si la fecha es hoy y hora < hora actual
+  const hoy = new Date();
+  const fechaSel = new Date(fecha);
+  if (hoy.toDateString() !== fechaSel.toDateString()) return false;
+
+  const [h, m] = hora.split(':').map(Number);
+  const actual = hoy.getHours() * 60 + hoy.getMinutes();
+  const target = h * 60 + m;
+  return target <= actual;
+}
+
+function handleChange(e) {
+  setHoraElegida(e.target.value);
+  onSelect?.(e.target.value);
+}
+---
+
+<select
+  id="hora"
+  name="hora"
+  class="border rounded p-2 w-full"
+  value={horaElegida}
+  onChange={handleChange}
+  required
+>
+  <option value="" disabled>Selecciona hora</option>
+
+  {
+    Object.keys(horarios).map(hora => {
+      const info = horarios[hora];
+      const disabled =
+        isPasada(hora) ||
+        info.estado === 'lleno' ||
+        (info.estado === 'insuficiente');
+
+      return (
+        <option
+          value={hora}
+          disabled={disabled}
+          class={disabled ? 'text-gray-400' : ''}
+        >
+          {hora}
+          {disabled && ' — no disponible'}
+        </option>
+      );
+    })
+  }
+</select>
