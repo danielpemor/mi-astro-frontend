@@ -158,36 +158,6 @@ const openingHours = await getOpeningHours();
           <li>• Las reservas están sujetas a disponibilidad.</li>
           <li>• Para grupos grandes (más de 8 personas), por favor contacta directamente al restaurante.</li>
         </ul>
-        
-        <!-- Horarios -->
-        <div class="mt-8">
-          <h3 class="text-xl font-bold mb-4">Nuestros horarios</h3>
-          <div class="flex flex-col md:flex-row justify-center gap-4 md:gap-8">
-            {openingHours.length > 0 ? (
-              openingHours.map((day) => (
-                <div class="flex flex-col items-center">
-                  <span class="font-medium">{day.day_of_week}</span>
-                  <span class="text-gray-600">{day.is_closed ? 'Cerrado' : `${day.open_time} - ${day.close_time}`}</span>
-                </div>
-              ))
-            ) : (
-              <>
-                <div class="flex flex-col items-center">
-                  <span class="font-medium">Lun - Vie</span>
-                  <span class="text-gray-600">11:00 - 22:00</span>
-                </div>
-                <div class="flex flex-col items-center">
-                  <span class="font-medium">Sábados</span>
-                  <span class="text-gray-600">10:00 - 23:00</span>
-                </div>
-                <div class="flex flex-col items-center">
-                  <span class="font-medium">Domingos</span>
-                  <span class="text-gray-600">10:00 - 21:00</span>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
       </div>
     </div>
   </section>
