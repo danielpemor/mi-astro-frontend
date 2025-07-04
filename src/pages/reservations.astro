@@ -1,6 +1,13 @@
 ---
 // src/pages/reservations.astro
 import DefaultLayout from '../layouts/DefaultLayout.astro';
+
+// Obtener fecha de hoy en la zona horaria local
+const today = new Date();
+const year = today.getFullYear();
+const month = (today.getMonth() + 1).toString().padStart(2, '0');
+const day = today.getDate().toString().padStart(2, '0');
+const todayStr = `${year}-${month}-${day}`;
 ---
 
 <DefaultLayout title="Reservaciones - Restaurante">
@@ -69,7 +76,7 @@ import DefaultLayout from '../layouts/DefaultLayout.astro';
                   id="fecha" 
                   name="fecha" 
                   required
-                  min={new Date().toISOString().split('T')[0]}
+                  min={todayStr}
                   class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--primaryColor)] focus:border-transparent"
                 >
               </div>
@@ -144,6 +151,11 @@ import DefaultLayout from '../layouts/DefaultLayout.astro';
             </button>
           </form>
         </div>
+      </div>
+      
+      <!-- Debug info para verificar fecha -->
+      <div class="mt-4 text-center text-sm text-gray-500">
+        <p>Fecha de hoy (servidor): {todayStr}</p>
       </div>
       
       <!-- Información adicional -->
