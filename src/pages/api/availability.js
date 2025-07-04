@@ -7,7 +7,7 @@ const DIRECTUS_URL =
 
 const getHeaders = () => ({ 'Content-Type': 'application/json' });
 
-// Capacidad por defecto (fallback)
+// Capacidad por defecto
 const CAPACIDAD_DEFAULT = {
   '10:00': 20, '10:30': 20, '11:00': 20, '11:30': 20,
   '12:00': 20, '12:30': 20, '13:00': 25, '13:30': 25,
@@ -15,155 +15,106 @@ const CAPACIDAD_DEFAULT = {
   '19:30': 25, '20:00': 30, '20:30': 30, '21:00': 25, '21:30': 20
 };
 
-// Función para obtener configuración de capacidad desde Directus
 async function obtenerConfiguracionCapacidad(fecha) {
   const diaSemana = new Date(fecha).getDay().toString();
 
-  // 1. Configuración específica por fecha
-  const urlFecha = `${DIRECTUS_URL}/items/configuracion_capacidad`
-    + `?filter[fecha_especifica][_eq]=${fecha}&filter[activo][_eq]=true`
-    + `&fields=capacidad_por_horario,descripcion&limit=1`;
-
   try {
+    // Intentar obtener configuración específica por fecha
+    const urlFecha = `${DIRECTUS_URL}/items/configuracion_capacidad?filter[fecha_especifica][_eq]=${fecha}&filter[activo][_eq]=true&fields=capacidad_por_horario&limit=1`;
     const respFecha = await fetch(urlFecha, { headers: getHeaders() });
     if (respFecha.ok) {
       const dataFecha = await respFecha.json();
       if (dataFecha.data?.length) {
-        return { 
-          capacidad: dataFecha.data[0].capacidad_por_horario, 
-          tipo: 'fecha', 
-          descripcion: dataFecha.data[0].descripcion 
-        };
+        return dataFecha.data[0].capacidad_por_horario;
       }
     }
-  } catch (e) {
-    console.error('Error obteniendo config por fecha:', e);
-  }
 
-  // 2. Configuración por día de semana
-  const urlDia = `${DIRECTUS_URL}/items/configuracion_capacidad`
-    + `?filter[dia_semana][_eq]=${diaSemana}&filter[activo][_eq]=true`
-    + `&filter[fecha_especifica][_null]=true&fields=capacidad_por_horario,descripcion&limit=1`;
-
-  try {
+    // Intentar obtener configuración por día de semana
+    const urlDia = `${DIRECTUS_URL}/items/configuracion_capacidad?filter[dia_semana][_eq]=${diaSemana}&filter[activo][_eq]=true&filter[fecha_especifica][_null]=true&fields=capacidad_por_horario&limit=1`;
     const respDia = await fetch(urlDia, { headers: getHeaders() });
     if (respDia.ok) {
       const dataDia = await respDia.json();
       if (dataDia.data?.length) {
-        return { 
-          capacidad: dataDia.data[0].capacidad_por_horario, 
-          tipo: 'dia', 
-          descripcion: dataDia.data[0].descripcion 
-        };
+        return dataDia.data[0].capacidad_por_horario;
       }
     }
   } catch (e) {
-    console.error('Error obteniendo config por día:', e);
+    console.error('Error obteniendo configuración:', e);
   }
 
-  // 3. Default
-  return { capacidad: CAPACIDAD_DEFAULT, tipo: 'default', descripcion: 'Config estándar' };
+  return CAPACIDAD_DEFAULT;
 }
 
 export async function GET({ url }) {
-  console.log('=== API Availability llamada ===');
-
   try {
     const searchParams = new URL(url).searchParams;
     const fecha = searchParams.get('fecha');
-    const personas = parseInt(searchParams.get('personas')) || 1;
+    const horaCliente = searchParams.get('horaCliente'); // Hora del navegador
 
     if (!fecha) {
-      return new Response(JSON.stringify({
-        error: 'Parámetro "fecha" es requerido'
-      }), {
+      return new Response(JSON.stringify({ error: 'Fecha requerida' }), { 
         status: 400,
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json' }
       });
     }
 
-    // Obtener configuración de capacidad desde Directus
-    const config = await obtenerConfiguracionCapacidad(fecha);
-    console.log('Configuración obtenida:', config);
+    // Obtener capacidad desde Directus
+    const capacidadConfig = await obtenerConfiguracionCapacidad(fecha);
 
-    // Obtener reservas para esa fecha
+    // Obtener reservas
     const checkUrl = `${DIRECTUS_URL}/items/reservas?filter[fecha][_eq]=${fecha}&filter[estado][_neq]=cancelada&limit=-1`;
     const response = await fetch(checkUrl, { headers: getHeaders() });
 
     if (!response.ok) {
-      throw new Error(`Error al consultar Directus: ${response.status}`);
+      throw new Error(`Error al consultar reservas: ${response.status}`);
     }
 
     const reservasData = await response.json();
     const reservas = reservasData.data || [];
-    console.log(`Reservas encontradas para ${fecha}: ${reservas.length}`);
 
-    // Agrupar reservas por hora
+    // Contar reservas por hora
     const reservasPorHora = {};
-    for (const reserva of reservas) {
-      const hora = reserva.hora;
-      if (!hora) continue;
-      if (!reservasPorHora[hora]) reservasPorHora[hora] = 0;
-      reservasPorHora[hora] += parseInt(reserva.personas || 1);
-    }
-
-    // Calcular disponibilidad por horario
-    const disponibilidad = {};
-    const ahora = new Date();
-    const esHoy = new Date(fecha).toDateString() === ahora.toDateString();
-    
-    // Obtener hora actual con 30 minutos de margen
-    const horaActualMinutos = ahora.getHours() * 60 + ahora.getMinutes() + 30;
-
-    Object.entries(config.capacidad).forEach(([hora, capacidadMaxima]) => {
-      const personasReservadas = reservasPorHora[hora] || 0;
-      const espaciosDisponibles = capacidadMaxima - personasReservadas;
-      
-      // Verificar si el horario ya pasó
-      let estaPasado = false;
-      if (esHoy) {
-        const [h, m] = hora.split(':').map(Number);
-        const horaMinutos = h * 60 + m;
-        estaPasado = horaMinutos < horaActualMinutos;
+    reservas.forEach(reserva => {
+      if (reserva.hora) {
+        reservasPorHora[reserva.hora] = (reservasPorHora[reserva.hora] || 0) + parseInt(reserva.personas || 1);
       }
+    });
+
+    // Calcular disponibilidad
+    const horarios = {};
+    const esHoy = new Date(fecha).toDateString() === new Date().toDateString();
+    
+    Object.entries(capacidadConfig).forEach(([hora, capacidad]) => {
+      const reservadas = reservasPorHora[hora] || 0;
+      const disponible = capacidad > reservadas;
       
-      disponibilidad[hora] = {
-        capacidadMaxima,
-        personasReservadas,
-        espaciosDisponibles: estaPasado ? 0 : espaciosDisponibles,
-        disponibleParaGrupo: !estaPasado && espaciosDisponibles >= personas,
-        porcentajeOcupacion: ((personasReservadas / capacidadMaxima) * 100).toFixed(1),
-        estado: estaPasado ? 'pasado' :
-          espaciosDisponibles === 0 ? 'lleno' :
-          espaciosDisponibles < personas ? 'insuficiente' :
-          espaciosDisponibles <= 5 ? 'casi_lleno' : 'disponible'
+      // Si es hoy y se envió la hora del cliente, verificar si ya pasó
+      let yaPaso = false;
+      if (esHoy && horaCliente) {
+        const [clienteHora, clienteMinutos] = horaCliente.split(':').map(Number);
+        const [horaSlot, minutosSlot] = hora.split(':').map(Number);
+        const ahora = clienteHora * 60 + clienteMinutos + 30; // 30 min margen
+        const slot = horaSlot * 60 + minutosSlot;
+        yaPaso = slot < ahora;
+      }
+
+      horarios[hora] = {
+        disponible: disponible && !yaPaso,
+        completo: reservadas >= capacidad,
+        pasado: yaPaso
       };
     });
 
-    return new Response(JSON.stringify({
-      fecha,
-      configuracion: {
-        tipo: config.tipo,
-        descripcion: config.descripcion
-      },
-      horarios: disponibilidad,
-      resumen: {
-        horariosDisponibles: Object.values(disponibilidad).filter(h => h.disponibleParaGrupo).length,
-        horariosLlenos: Object.values(disponibilidad).filter(h => h.estado === 'lleno').length,
-      }
-    }), {
+    return new Response(JSON.stringify({ horarios }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
-    console.error('Error en API Availability:', error);
-    return new Response(JSON.stringify({
-      error: 'Error al verificar disponibilidad',
-      message: error.message
-    }), {
+    console.error('Error:', error);
+    return new Response(JSON.stringify({ error: 'Error al verificar disponibilidad' }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json' }
     });
   }
 }
