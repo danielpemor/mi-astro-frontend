@@ -1,9 +1,7 @@
 ---
 // src/pages/reservations.astro
 import DefaultLayout from '../layouts/DefaultLayout.astro';
-import { getOpeningHours } from '../lib/directus';
 
-const openingHours = await getOpeningHours();
 ---
 
 <DefaultLayout title="Reservaciones - Restaurante">
@@ -97,10 +95,9 @@ const openingHours = await getOpeningHours();
                   id="hora" 
                   name="hora" 
                   required
-                  disabled
                   class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--primaryColor)] focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
-                  <option value="">Primero selecciona una fecha</option>
+                  <option value="">Selecciona una hora</option>
                 </select>
               </div>
               
@@ -113,15 +110,22 @@ const openingHours = await getOpeningHours();
                   id="personas" 
                   name="personas" 
                   required
-                  disabled
                   class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--primaryColor)] focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
-                  <option value="">Primero selecciona fecha y hora</option>
+                  <option value="">Selecciona</option>
+                  <option value="1">1 persona</option>
+                  <option value="2">2 personas</option>
+                  <option value="3">3 personas</option>
+                  <option value="4">4 personas</option>
+                  <option value="5">5 personas</option>
+                  <option value="6">6 personas</option>
+                  <option value="7">7 personas</option>
+                  <option value="8">8 personas</option>
                 </select>
               </div>
             </div>
             
-            <!-- Resumen de disponibilidad -->
+                        <!-- Resumen de disponibilidad -->
             <div id="availabilitySummary" class="hidden p-4 rounded-lg">
               <h4 class="font-medium mb-2">Disponibilidad del día</h4>
               <div id="hourlyAvailability" class="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm"></div>
@@ -141,7 +145,6 @@ const openingHours = await getOpeningHours();
             <button 
               type="submit" 
               id="submitBtn"
-              disabled
               class="w-full bg-[var(--primaryColor)] text-white py-3 px-6 rounded-md hover:bg-[var(--secondaryColor)] transition-colors duration-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Confirmar reserva
@@ -159,48 +162,15 @@ const openingHours = await getOpeningHours();
           <li>• Las reservas están sujetas a disponibilidad.</li>
           <li>• Para grupos grandes (más de 8 personas), por favor contacta directamente al restaurante.</li>
         </ul>
-        
-        <!-- Horarios -->
-        <div class="mt-8">
-          <h3 class="text-xl font-bold mb-4">Nuestros horarios</h3>
-          <div class="flex flex-col md:flex-row justify-center gap-4 md:gap-8">
-            {openingHours.length > 0 ? (
-              openingHours.map((day) => (
-                <div class="flex flex-col items-center">
-                  <span class="font-medium">{day.day_of_week}</span>
-                  <span class="text-gray-600">{day.is_closed ? 'Cerrado' : `${day.open_time} - ${day.close_time}`}</span>
-                </div>
-              ))
-            ) : (
-              <>
-                <div class="flex flex-col items-center">
-                  <span class="font-medium">Lun - Vie</span>
-                  <span class="text-gray-600">11:00 - 22:00</span>
-                </div>
-                <div class="flex flex-col items-center">
-                  <span class="font-medium">Sábados</span>
-                  <span class="text-gray-600">10:00 - 23:00</span>
-                </div>
-                <div class="flex flex-col items-center">
-                  <span class="font-medium">Domingos</span>
-                  <span class="text-gray-600">10:00 - 21:00</span>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
       </div>
     </div>
   </section>
 </DefaultLayout>
 
 <script>
-  // Sistema de disponibilidad en tiempo real
   let availabilityData = null;
-  let selectedHour = null;
   let currentFecha = null;
   
-  // Formulario de reservación
   document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('reservationForm');
     const submitBtn = document.getElementById('submitBtn');
@@ -217,7 +187,6 @@ const openingHours = await getOpeningHours();
       
       currentFecha = fecha;
       
-      // Mostrar indicador de carga solo si se solicita
       if (showLoading) {
         availabilityIndicator.classList.remove('hidden');
         availabilitySummary.classList.add('hidden');
@@ -228,12 +197,9 @@ const openingHours = await getOpeningHours();
         if (!response.ok) throw new Error('Error al verificar disponibilidad');
         
         availabilityData = await response.json();
-        console.log('Disponibilidad actualizada:', availabilityData);
+        console.log('Disponibilidad:', availabilityData);
         
-        // Actualizar selector de hora
         updateHourSelector();
-        
-        // Mostrar resumen de disponibilidad
         showAvailabilitySummary();
         
       } catch (error) {
@@ -248,87 +214,49 @@ const openingHours = await getOpeningHours();
       }
     }
     
-    // Actualizar selector de hora con disponibilidad
+    // Actualizar selector de hora
     function updateHourSelector() {
-      // Guardar el valor actual si existe
       const currentValue = horaSelect.value;
-      
-      // Limpiar y regenerar opciones
       horaSelect.innerHTML = '<option value="">Selecciona una hora</option>';
       
-      // Agregar horarios de mañana
-      const horariosMañana = ['08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00'];
-      const horariosNoche = ['19:00', '19:30', '20:00', '20:30', '21:00', '21:30'];
-      
-      // Agrupar por mañana y noche
-      const optgroupMañana = document.createElement('optgroup');
-      optgroupMañana.label = 'Mañana / Tarde';
-      
-      const optgroupNoche = document.createElement('optgroup');
-      optgroupNoche.label = 'Noche';
-      
       let hasAvailableHours = false;
+      const horasOrdenadas = Object.keys(availabilityData.horarios).sort();
       
-      horariosMañana.forEach(hora => {
+      horasOrdenadas.forEach(hora => {
         const info = availabilityData.horarios[hora];
-        if (info) {
-          const option = createHourOption(hora, info);
-          if (!option.disabled) hasAvailableHours = true;
-          optgroupMañana.appendChild(option);
+        const option = document.createElement('option');
+        option.value = hora;
+        
+        if (info.estado === 'pasado') {
+          option.disabled = true;
+          option.textContent = `${hora} - Ya pasó`;
+          option.style.color = '#9ca3af';
+        } else if (info.espaciosDisponibles === 0) {
+          option.disabled = true;
+          option.textContent = `${hora} - COMPLETO`;
+          option.style.color = '#ef4444';
+        } else if (info.espaciosDisponibles <= 5) {
+          option.textContent = `${hora} - ¡Solo ${info.espaciosDisponibles} lugares!`;
+          option.style.color = '#f97316';
+          hasAvailableHours = true;
+        } else {
+          option.textContent = `${hora} - ${info.espaciosDisponibles} lugares disponibles`;
+          option.style.color = '#16a34a';
+          hasAvailableHours = true;
         }
+        
+        horaSelect.appendChild(option);
       });
       
-      horariosNoche.forEach(hora => {
-        const info = availabilityData.horarios[hora];
-        if (info) {
-          const option = createHourOption(hora, info);
-          if (!option.disabled) hasAvailableHours = true;
-          optgroupNoche.appendChild(option);
-        }
-      });
-      
-      horaSelect.appendChild(optgroupMañana);
-      horaSelect.appendChild(optgroupNoche);
-      
-      // Restaurar el valor si todavía es válido
       if (currentValue && availabilityData.horarios[currentValue]?.espaciosDisponibles > 0) {
         horaSelect.value = currentValue;
         updatePersonasSelector(currentValue);
-      } else {
-        // Reset personas si la hora ya no es válida
-        personasSelect.innerHTML = '<option value="">Primero selecciona una hora</option>';
-        personasSelect.disabled = true;
       }
       
-      // Actualizar info
-      document.getElementById('horaInfo').textContent = hasAvailableHours ? '(ver disponibilidad)' : '';
-    }
-    
-    function createHourOption(hora, info) {
-      const option = document.createElement('option');
-      option.value = hora;
-      
-      if (info.estado === 'pasado') {
-        option.disabled = true;
-        option.textContent = `${hora} - Ya pasó`;
-        option.style.color = '#9ca3af';
-      } else if (info.espaciosDisponibles === 0) {
-        option.disabled = true;
-        option.textContent = `${hora} - COMPLETO`;
-        option.style.color = '#ef4444';
-      } else if (info.espaciosDisponibles <= 5) {
-        option.textContent = `${hora} - ¡Solo ${info.espaciosDisponibles} lugares!`;
-        option.style.color = '#f97316';
-      } else {
-        option.textContent = `${hora} - ${info.espaciosDisponibles} lugares disponibles`;
-        option.style.color = '#16a34a';
-      }
-      
-      return option;
+      document.getElementById('horaInfo').textContent = hasAvailableHours ? '' : '(sin disponibilidad)';
     }
     
     // Mostrar resumen de disponibilidad
-        // Mostrar resumen de disponibilidad
     function showAvailabilitySummary() {
       hourlyAvailability.innerHTML = '';
       availabilitySummary.classList.remove('hidden');
@@ -357,7 +285,7 @@ const openingHours = await getOpeningHours();
         hourlyAvailability.appendChild(div);
       });
       
-      // Actualizar clase del contenedor según disponibilidad general
+      // Color del contenedor según disponibilidad
       if (availabilityData.resumen.horariosDisponibles === 0) {
         availabilitySummary.className = 'p-4 rounded-lg bg-red-50 border border-red-200';
       } else if (availabilityData.resumen.horariosDisponibles <= 3) {
@@ -367,7 +295,7 @@ const openingHours = await getOpeningHours();
       }
     }
     
-    // Actualizar selector de personas según hora seleccionada
+    // Actualizar selector de personas
     function updatePersonasSelector(hora) {
       if (!hora || !availabilityData) {
         personasSelect.innerHTML = '<option value="">Primero selecciona una hora</option>';
@@ -378,19 +306,15 @@ const openingHours = await getOpeningHours();
       
       const horaInfo = availabilityData.horarios[hora];
       if (!horaInfo || horaInfo.espaciosDisponibles === 0) {
-        personasSelect.innerHTML = '<option value="">No hay disponibilidad para esta hora</option>';
+        personasSelect.innerHTML = '<option value="">No hay disponibilidad</option>';
         personasSelect.disabled = true;
         submitBtn.disabled = true;
         return;
       }
       
-      // Guardar valor actual
-      const currentValue = personasSelect.value;
-      
       personasSelect.innerHTML = '<option value="">Selecciona número de personas</option>';
       personasSelect.disabled = false;
       
-      // Generar opciones según disponibilidad
       const maxPersonas = Math.min(8, horaInfo.espaciosDisponibles);
       for (let i = 1; i <= maxPersonas; i++) {
         const option = document.createElement('option');
@@ -399,93 +323,48 @@ const openingHours = await getOpeningHours();
         personasSelect.appendChild(option);
       }
       
-      // Restaurar valor si es válido
-      if (currentValue && parseInt(currentValue) <= maxPersonas) {
-        personasSelect.value = currentValue;
-        submitBtn.disabled = false;
-      }
-      
-      // Actualizar info
-      document.getElementById('personasInfo').textContent = `(máx. ${maxPersonas} disponibles)`;
-      
-      // Guardar hora seleccionada
-      selectedHour = hora;
+      document.getElementById('personasInfo').textContent = `(máx. ${maxPersonas})`;
     }
     
-    // Event listener para cambio de fecha
+    // Event listeners
     fechaInput.addEventListener('change', (e) => {
-      const fecha = e.target.value;
-      if (fecha) {
-        checkAvailability(fecha);
-      } else {
-        // Reset si no hay fecha
-        horaSelect.innerHTML = '<option value="">Selecciona una hora</option>';
-        horaSelect.disabled = false;
-        personasSelect.innerHTML = '<option value="">Selecciona</option>';
-        personasSelect.disabled = false;
-        submitBtn.disabled = true;
-        availabilitySummary.classList.add('hidden');
-        document.getElementById('horaInfo').textContent = '';
-        document.getElementById('personasInfo').textContent = '';
-      }
-    });
-    
-    // Event listener para cambio de hora
-    horaSelect.addEventListener('change', (e) => {
-      if (availabilityData && e.target.value) {
-        updatePersonasSelector(e.target.value);
-      }
-    });
-    
-    // Event listener para cambio de personas
-    personasSelect.addEventListener('change', (e) => {
       if (e.target.value) {
-        submitBtn.disabled = false;
+        checkAvailability(e.target.value);
       } else {
-        submitBtn.disabled = true;
+        horaSelect.innerHTML = '<option value="">Selecciona una hora</option>';
+        personasSelect.innerHTML = '<option value="">Selecciona</option>';
+        availabilitySummary.classList.add('hidden');
       }
     });
     
-    // Actualización automática de disponibilidad cada 30 segundos
+    horaSelect.addEventListener('change', (e) => {
+      updatePersonasSelector(e.target.value);
+    });
+    
+    personasSelect.addEventListener('change', (e) => {
+      submitBtn.disabled = !e.target.value;
+    });
+    
+    // Auto-actualización cada 30 segundos
     let updateInterval;
-    function startAutoUpdate() {
-      if (updateInterval) clearInterval(updateInterval);
-      
-      updateInterval = setInterval(() => {
-        if (currentFecha && !availabilityIndicator.classList.contains('hidden')) {
-          return; // No actualizar si ya está cargando
-        }
-        
-        if (currentFecha) {
-          console.log('Actualizando disponibilidad automáticamente...');
-          checkAvailability(currentFecha, false); // false = no mostrar indicador de carga
-        }
-      }, 30000); // 30 segundos
-    }
-    
-    // Iniciar actualización automática cuando se selecciona una fecha
     fechaInput.addEventListener('change', () => {
+      if (updateInterval) clearInterval(updateInterval);
       if (fechaInput.value) {
-        startAutoUpdate();
-      } else {
-        if (updateInterval) clearInterval(updateInterval);
+        updateInterval = setInterval(() => {
+          if (!availabilityIndicator.classList.contains('hidden')) return;
+          checkAvailability(currentFecha, false);
+        }, 30000);
       }
     });
     
-    // Limpiar intervalo al salir de la página
-    window.addEventListener('beforeunload', () => {
-      if (updateInterval) clearInterval(updateInterval);
-    });
-    
+    // Envío del formulario
     if (form) {
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
         
-        // Deshabilitar el botón durante el envío
         submitBtn.disabled = true;
         submitBtn.textContent = 'Enviando...';
         
-        // Obtener datos del formulario
         const formData = new FormData(form);
         const reservationData = {
           nombre: formData.get('nombre'),
@@ -497,64 +376,32 @@ const openingHours = await getOpeningHours();
           comentarios: formData.get('comentarios') || null
         };
         
-        console.log('Enviando datos de reserva:', reservationData);
-        
         try {
-          // Usar la API route de Astro en lugar de llamar directamente a Directus
           const response = await fetch('/api/reservations', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(reservationData)
           });
           
-          console.log('Respuesta del servidor:', response);
-          
           if (response.ok) {
-            const result = await response.json();
-            console.log('Reserva creada:', result);
-            alert('¡Reserva recibida con éxito! Te contactaremos para confirmar tu reserva.');
-            
-            // Limpiar intervalo de actualización
-            if (updateInterval) clearInterval(updateInterval);
-            
-            // Reset formulario
+            alert('¡Reserva recibida con éxito! Te contactaremos para confirmar.');
             form.reset();
             horaSelect.innerHTML = '<option value="">Selecciona una hora</option>';
             personasSelect.innerHTML = '<option value="">Selecciona</option>';
-            submitBtn.disabled = true;
             availabilitySummary.classList.add('hidden');
-            availabilityData = null;
-            selectedHour = null;
-            currentFecha = null;
-            document.getElementById('horaInfo').textContent = '';
-            document.getElementById('personasInfo').textContent = '';
-            
+            if (updateInterval) clearInterval(updateInterval);
           } else {
             const errorData = await response.json();
-            console.error('Error al enviar reserva:', errorData);
-            
             if (response.status === 409) {
-              // Capacidad insuficiente - actualizar disponibilidad
-              alert(`Lo sentimos, la capacidad ha cambiado. Solo quedan ${errorData.disponibles} lugares disponibles para este horario. Actualizando disponibilidad...`);
-              // Recargar disponibilidad inmediatamente
-              await checkAvailability(formData.get('fecha'));
-              // Actualizar el selector de personas con la nueva disponibilidad
-              if (selectedHour) {
-                updatePersonasSelector(selectedHour);
-              }
+              alert(`Lo sentimos, solo quedan ${errorData.disponibles} lugares para este horario.`);
+              await checkAvailability(reservationData.fecha);
             } else {
-              alert('El horario seleccionado ya alcanzó el límite de su capacidad.');
-              // Actualizar disponibilidad para reflejar cambios
-              await checkAvailability(formData.get('fecha'));
+              alert('El horario seleccionado ya está completo.');
             }
           }
         } catch (error) {
-          console.error('Error de red:', error);
-          alert('Error de conexión. Por favor, verifica tu conexión a internet e inténtalo de nuevo.');
+          alert('Error de conexión. Por favor, intenta de nuevo.');
         } finally {
-          // Rehabilitar el botón
           submitBtn.disabled = false;
           submitBtn.textContent = 'Confirmar reserva';
         }
@@ -564,34 +411,19 @@ const openingHours = await getOpeningHours();
 </script>
 
 <style>
-  /* Estilos para las opciones del select */
-  option:disabled {
-    color: #9ca3af;
+  /* Estilos para opciones deshabilitadas */
+  select option:disabled {
+    color: #9ca3af !important;
   }
   
-  option.text-red-500 {
-    color: #ef4444;
-  }
-  
-  option.text-orange-500 {
-    color: #f97316;
-  }
-  
-  option.text-green-600 {
-    color: #16a34a;
-  }
-  
-  /* Animación para el indicador de carga */
+  /* Animación de carga */
   @keyframes pulse {
-    0%, 100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.5;
-    }
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
   }
   
   #availabilityIndicator {
     animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
-</style> 
+</style>
+            

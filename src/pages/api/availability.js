@@ -1,53 +1,72 @@
 export const prerender = false;
 
-// Configuración de Directus
 const DIRECTUS_URL =
   process.env.DIRECTUS_URL ||
   process.env.PUBLIC_DIRECTUS_URL ||
   'http://localhost:8055';
 
-// Capacidad máxima por horario (agregando horarios de mañana)
-const CAPACIDAD_MAXIMA = {
-  '08:00': 15,
-  '08:30': 15,
-  '09:00': 20,
-  '09:30': 20,
-  '10:00': 20,
-  '10:30': 20,
-  '11:00': 20,
-  '11:30': 20,
-  '12:00': 20,
-  '12:30': 20,
-  '13:00': 25,
-  '13:30': 25,
-  '14:00': 30,
-  '14:30': 30,
-  '15:00': 25,
-  '19:00': 25,
-  '19:30': 25,
-  '20:00': 30,
-  '20:30': 30,
-  '21:00': 25,
-  '21:30': 20
+const getHeaders = () => ({ 'Content-Type': 'application/json' });
+
+// Capacidad por defecto (fallback)
+const CAPACIDAD_DEFAULT = {
+  '10:00': 20, '10:30': 20, '11:00': 20, '11:30': 20,
+  '12:00': 20, '12:30': 20, '13:00': 25, '13:30': 25,
+  '14:00': 30, '14:30': 30, '15:00': 25, '19:00': 25,
+  '19:30': 25, '20:00': 30, '20:30': 30, '21:00': 25, '21:30': 20
 };
 
-// Función para extraer hora desde datetime
-function extractHoraFromDateTime(fechaHora) {
-  if (!fechaHora) return null;
+// Función para obtener configuración de capacidad desde Directus
+async function obtenerConfiguracionCapacidad(fecha) {
+  const diaSemana = new Date(fecha).getDay().toString();
+
+  // 1. Configuración específica por fecha
+  const urlFecha = `${DIRECTUS_URL}/items/configuracion_capacidad`
+    + `?filter[fecha_especifica][_eq]=${fecha}&filter[activo][_eq]=true`
+    + `&fields=capacidad_por_horario,descripcion&limit=1`;
+
   try {
-    const date = new Date(fechaHora);
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    return `${hours}:${minutes}`;
+    const respFecha = await fetch(urlFecha, { headers: getHeaders() });
+    if (respFecha.ok) {
+      const dataFecha = await respFecha.json();
+      if (dataFecha.data?.length) {
+        return { 
+          capacidad: dataFecha.data[0].capacidad_por_horario, 
+          tipo: 'fecha', 
+          descripcion: dataFecha.data[0].descripcion 
+        };
+      }
+    }
   } catch (e) {
-    console.error('Error extrayendo hora:', e);
-    return null;
+    console.error('Error obteniendo config por fecha:', e);
   }
+
+  // 2. Configuración por día de semana
+  const urlDia = `${DIRECTUS_URL}/items/configuracion_capacidad`
+    + `?filter[dia_semana][_eq]=${diaSemana}&filter[activo][_eq]=true`
+    + `&filter[fecha_especifica][_null]=true&fields=capacidad_por_horario,descripcion&limit=1`;
+
+  try {
+    const respDia = await fetch(urlDia, { headers: getHeaders() });
+    if (respDia.ok) {
+      const dataDia = await respDia.json();
+      if (dataDia.data?.length) {
+        return { 
+          capacidad: dataDia.data[0].capacidad_por_horario, 
+          tipo: 'dia', 
+          descripcion: dataDia.data[0].descripcion 
+        };
+      }
+    }
+  } catch (e) {
+    console.error('Error obteniendo config por día:', e);
+  }
+
+  // 3. Default
+  return { capacidad: CAPACIDAD_DEFAULT, tipo: 'default', descripcion: 'Config estándar' };
 }
 
 export async function GET({ url }) {
   console.log('=== API Availability llamada ===');
-  console.log('DIRECTUS_URL:', DIRECTUS_URL);
 
   try {
     const searchParams = new URL(url).searchParams;
@@ -63,31 +82,16 @@ export async function GET({ url }) {
       });
     }
 
-    // Verificar si la fecha es pasada
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-    const fechaReserva = new Date(fecha + 'T00:00:00');
-    
-    if (fechaReserva < hoy) {
-      return new Response(JSON.stringify({
-        error: 'No se pueden hacer reservas para fechas pasadas'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
+    // Obtener configuración de capacidad desde Directus
+    const config = await obtenerConfiguracionCapacidad(fecha);
+    console.log('Configuración obtenida:', config);
 
-    // Obtener reservas para esa fecha (excepto canceladas)
+    // Obtener reservas para esa fecha
     const checkUrl = `${DIRECTUS_URL}/items/reservas?filter[fecha][_eq]=${fecha}&filter[estado][_neq]=cancelada&limit=-1`;
-    console.log('Consultando disponibilidad en:', checkUrl);
-
-    const response = await fetch(checkUrl, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-    });
+    const response = await fetch(checkUrl, { headers: getHeaders() });
 
     if (!response.ok) {
-      throw new Error(`Error al consultar Directus: ${response.status} ${response.statusText}`);
+      throw new Error(`Error al consultar Directus: ${response.status}`);
     }
 
     const reservasData = await response.json();
@@ -97,30 +101,25 @@ export async function GET({ url }) {
     // Agrupar reservas por hora
     const reservasPorHora = {};
     for (const reserva of reservas) {
-      const hora = reserva.hora || extractHoraFromDateTime(reserva.fecha_hora);
+      const hora = reserva.hora;
       if (!hora) continue;
       if (!reservasPorHora[hora]) reservasPorHora[hora] = 0;
       reservasPorHora[hora] += parseInt(reserva.personas || 1);
     }
 
-    console.log('Reservas por hora:', reservasPorHora);
-
     // Calcular disponibilidad por horario
     const disponibilidad = {};
-    let totalCapacidad = 0;
-    let totalReservado = 0;
-    
-    // Si es hoy, obtener la hora actual con margen de 30 minutos
-    const esHoy = fechaReserva.toDateString() === new Date().toDateString();
     const ahora = new Date();
-    const horaActualMinutos = ahora.getHours() * 60 + ahora.getMinutes() + 30; // 30 min de margen
+    const esHoy = new Date(fecha).toDateString() === ahora.toDateString();
     
-    for (const hora of Object.keys(CAPACIDAD_MAXIMA)) {
-      const capacidadMaxima = CAPACIDAD_MAXIMA[hora];
+    // Obtener hora actual con 30 minutos de margen
+    const horaActualMinutos = ahora.getHours() * 60 + ahora.getMinutes() + 30;
+
+    Object.entries(config.capacidad).forEach(([hora, capacidadMaxima]) => {
       const personasReservadas = reservasPorHora[hora] || 0;
       const espaciosDisponibles = capacidadMaxima - personasReservadas;
       
-      // Verificar si el horario ya pasó (solo si es hoy)
+      // Verificar si el horario ya pasó
       let estaPasado = false;
       if (esHoy) {
         const [h, m] = hora.split(':').map(Number);
@@ -128,38 +127,29 @@ export async function GET({ url }) {
         estaPasado = horaMinutos < horaActualMinutos;
       }
       
-      const disponibleParaGrupo = !estaPasado && espaciosDisponibles >= personas;
-      
-      totalCapacidad += capacidadMaxima;
-      totalReservado += personasReservadas;
-
       disponibilidad[hora] = {
         capacidadMaxima,
         personasReservadas,
-        espaciosDisponibles,
-        disponibleParaGrupo,
+        espaciosDisponibles: estaPasado ? 0 : espaciosDisponibles,
+        disponibleParaGrupo: !estaPasado && espaciosDisponibles >= personas,
         porcentajeOcupacion: ((personasReservadas / capacidadMaxima) * 100).toFixed(1),
         estado: estaPasado ? 'pasado' :
           espaciosDisponibles === 0 ? 'lleno' :
           espaciosDisponibles < personas ? 'insuficiente' :
           espaciosDisponibles <= 5 ? 'casi_lleno' : 'disponible'
       };
-    }
+    });
 
     return new Response(JSON.stringify({
       fecha,
-      personasSolicitadas: personas,
+      configuracion: {
+        tipo: config.tipo,
+        descripcion: config.descripcion
+      },
       horarios: disponibilidad,
       resumen: {
-        totalHorarios: Object.keys(CAPACIDAD_MAXIMA).length,
         horariosDisponibles: Object.values(disponibilidad).filter(h => h.disponibleParaGrupo).length,
-        horariosLlenos: Object.values(disponibilidad).filter(h => h.espaciosDisponibles === 0).length,
-        horariosInsuficientes: Object.values(disponibilidad).filter(h =>
-          h.espaciosDisponibles > 0 && h.espaciosDisponibles < personas && h.estado !== 'pasado'
-        ).length,
-        capacidadTotal: totalCapacidad,
-        personasReservadas: totalReservado,
-        porcentajeOcupacionGeneral: ((totalReservado / totalCapacidad) * 100).toFixed(1)
+        horariosLlenos: Object.values(disponibilidad).filter(h => h.estado === 'lleno').length,
       }
     }), {
       status: 200,
