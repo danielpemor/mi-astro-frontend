@@ -16,13 +16,11 @@ const CAPACIDAD_DEFAULT = {
 };
 
 async function obtenerConfiguracionCapacidad(fecha) {
-  // Parsear fecha correctamente para evitar problemas de zona horaria
   const [year, month, day] = fecha.split('-').map(Number);
   const fechaLocal = new Date(year, month - 1, day);
   const diaSemana = fechaLocal.getDay().toString();
 
   try {
-    // Intentar obtener configuración específica por fecha
     const urlFecha = `${DIRECTUS_URL}/items/configuracion_capacidad?filter[fecha_especifica][_eq]=${fecha}&filter[activo][_eq]=true&fields=capacidad_por_horario&limit=1`;
     const respFecha = await fetch(urlFecha, { headers: getHeaders() });
     if (respFecha.ok) {
@@ -32,7 +30,6 @@ async function obtenerConfiguracionCapacidad(fecha) {
       }
     }
 
-    // Intentar obtener configuración por día de semana
     const urlDia = `${DIRECTUS_URL}/items/configuracion_capacidad?filter[dia_semana][_eq]=${diaSemana}&filter[activo][_eq]=true&filter[fecha_especifica][_null]=true&fields=capacidad_por_horario&limit=1`;
     const respDia = await fetch(urlDia, { headers: getHeaders() });
     if (respDia.ok) {
@@ -52,8 +49,8 @@ export async function GET({ url }) {
   try {
     const searchParams = new URL(url).searchParams;
     const fecha = searchParams.get('fecha');
-    const horaCliente = searchParams.get('horaCliente');
-    const fechaClienteStr = searchParams.get('fechaCliente'); // Nueva: fecha actual del cliente
+    const horaClienteStr = searchParams.get('horaCliente');
+    const fechaClienteStr = searchParams.get('fechaCliente');
 
     if (!fecha) {
       return new Response(JSON.stringify({ error: 'Fecha requerida' }), { 
@@ -84,40 +81,45 @@ export async function GET({ url }) {
       }
     });
 
-    // Verificar si es hoy usando la fecha del cliente
+    // Verificar si es hoy
     const esHoy = fecha === fechaClienteStr;
     
-    console.log('Fecha seleccionada:', fecha);
-    console.log('Fecha del cliente:', fechaClienteStr);
-    console.log('Es hoy?', esHoy);
-
     // Calcular disponibilidad
     const horarios = {};
     
     Object.entries(capacidadConfig).forEach(([hora, capacidad]) => {
       const reservadas = reservasPorHora[hora] || 0;
-      const disponible = capacidad > reservadas;
+      const hayEspacio = capacidad > reservadas;
       
-      // Solo marcar como pasado si es HOY
+      // Solo marcar como pasado si es HOY y la hora ya pasó
       let yaPaso = false;
-      if (esHoy && horaCliente) {
-        const [clienteHora, clienteMinutos] = horaCliente.split(':').map(Number);
-        const [horaSlot, minutosSlot] = hora.split(':').map(Number);
-        const ahora = clienteHora * 60 + clienteMinutos + 30; // 30 min margen
-        const slot = horaSlot * 60 + minutosSlot;
-        yaPaso = slot < ahora;
+      if (esHoy && horaClienteStr) {
+        const [horaActual, minActual] = horaClienteStr.split(':').map(Number);
+        const [horaSlot, minSlot] = hora.split(':').map(Number);
         
-        console.log(`Hora ${hora}: slot=${slot}, ahora=${ahora}, yaPaso=${yaPaso}`);
+        // Comparar directamente sin margen
+        if (horaSlot < horaActual) {
+          yaPaso = true;
+        } else if (horaSlot === horaActual && minSlot <= minActual) {
+          yaPaso = true;
+        }
       }
 
       horarios[hora] = {
-        disponible: disponible && !yaPaso,
-        completo: reservadas >= capacidad,
+        disponible: hayEspacio && !yaPaso,
+        completo: !hayEspacio,
         pasado: yaPaso
       };
     });
 
-    return new Response(JSON.stringify({ horarios, debug: { fecha, fechaClienteStr, esHoy } }), {
+    console.log('=== Debug Availability ===');
+    console.log('Fecha seleccionada:', fecha);
+    console.log('Fecha cliente:', fechaClienteStr);
+    console.log('Hora cliente:', horaClienteStr);
+    console.log('Es hoy?:', esHoy);
+    console.log('Horarios:', horarios);
+
+    return new Response(JSON.stringify({ horarios }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });

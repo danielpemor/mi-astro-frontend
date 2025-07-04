@@ -202,8 +202,12 @@ import DefaultLayout from '../layouts/DefaultLayout.astro';
       const horaCliente = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
       const fechaCliente = getFechaLocal(now);
       
-      console.log('Fecha actual del cliente:', fechaCliente);
+      console.log('=== Debug Cliente ===');
+      console.log('Fecha/hora actual:', now.toString());
+      console.log('Fecha cliente formato:', fechaCliente);
+      console.log('Hora cliente:', horaCliente);
       console.log('Fecha seleccionada:', fecha);
+      console.log('¿Es hoy?:', fecha === fechaCliente);
       
       try {
         const response = await fetch(`/api/availability?fecha=${fecha}&horaCliente=${horaCliente}&fechaCliente=${fechaCliente}`);
@@ -212,19 +216,16 @@ import DefaultLayout from '../layouts/DefaultLayout.astro';
         const data = await response.json();
         const horarios = data.horarios;
         
-        console.log('Debug info:', data.debug);
+        console.log('Respuesta disponibilidad:', horarios);
         
         // Actualizar opciones del select de hora
+        let algunaDisponible = false;
         Array.from(horaSelect.options).forEach(option => {
           if (option.value) {
             const horaInfo = horarios[option.value];
             if (!horaInfo) return;
             
-            if (horaInfo.pasado) {
-              option.disabled = true;
-              option.textContent = opcionesOriginales[option.value];
-              option.classList.add('text-gray-400');
-            } else if (horaInfo.completo) {
+            if (horaInfo.pasado || horaInfo.completo) {
               option.disabled = true;
               option.textContent = opcionesOriginales[option.value];
               option.classList.add('text-gray-400');
@@ -232,9 +233,12 @@ import DefaultLayout from '../layouts/DefaultLayout.astro';
               option.disabled = false;
               option.textContent = opcionesOriginales[option.value];
               option.classList.remove('text-gray-400');
+              algunaDisponible = true;
             }
           }
         });
+        
+        console.log('¿Hay alguna hora disponible?:', algunaDisponible);
       } catch (error) {
         console.error('Error verificando disponibilidad:', error);
       }
