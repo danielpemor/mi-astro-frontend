@@ -1,13 +1,6 @@
 ---
 // src/pages/reservations.astro
 import DefaultLayout from '../layouts/DefaultLayout.astro';
-
-// Obtener fecha de hoy en la zona horaria local
-const today = new Date();
-const year = today.getFullYear();
-const month = (today.getMonth() + 1).toString().padStart(2, '0');
-const day = today.getDate().toString().padStart(2, '0');
-const todayStr = `${year}-${month}-${day}`;
 ---
 
 <DefaultLayout title="Reservaciones - Restaurante">
@@ -76,7 +69,6 @@ const todayStr = `${year}-${month}-${day}`;
                   id="fecha" 
                   name="fecha" 
                   required
-                  min={todayStr}
                   class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--primaryColor)] focus:border-transparent"
                 >
               </div>
@@ -153,10 +145,8 @@ const todayStr = `${year}-${month}-${day}`;
         </div>
       </div>
       
-      <!-- Debug info para verificar fecha -->
-      <div class="mt-4 text-center text-sm text-gray-500">
-        <p>Fecha de hoy (servidor): {todayStr}</p>
-      </div>
+      <!-- Debug info -->
+      <div id="debugInfo" class="mt-4 text-center text-sm text-gray-500"></div>
       
       <!-- Información adicional -->
       <div class="mt-12 text-center">
@@ -177,6 +167,23 @@ const todayStr = `${year}-${month}-${day}`;
     const submitBtn = document.getElementById('submitBtn');
     const fechaInput = document.getElementById('fecha');
     const horaSelect = document.getElementById('hora');
+    const debugInfo = document.getElementById('debugInfo');
+    
+    // Establecer fecha mínima como hoy (en hora local del cliente)
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = (today.getMonth() + 1).toString().padStart(2, '0');
+    const day = today.getDate().toString().padStart(2, '0');
+    const todayStr = `${year}-${month}-${day}`;
+    
+    fechaInput.setAttribute('min', todayStr);
+    
+    // Mostrar info de debug
+    debugInfo.innerHTML = `
+      <p>Hora actual de tu navegador: ${today.toLocaleString()}</p>
+      <p>Fecha mínima permitida: ${todayStr}</p>
+      <p>Zona horaria: ${Intl.DateTimeFormat().resolvedOptions().timeZone}</p>
+    `;
     
     // Guardar los textos originales de las opciones
     const opcionesOriginales = {};
@@ -215,7 +222,7 @@ const todayStr = `${year}-${month}-${day}`;
       const fechaCliente = getFechaLocal(now);
       
       console.log('=== Debug Cliente ===');
-      console.log('Fecha/hora actual:', now.toString());
+      console.log('Fecha/hora actual navegador:', now.toString());
       console.log('Fecha cliente formato:', fechaCliente);
       console.log('Hora cliente:', horaCliente);
       console.log('Fecha seleccionada:', fecha);
