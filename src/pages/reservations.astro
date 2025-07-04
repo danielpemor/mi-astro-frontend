@@ -215,12 +215,21 @@ import DefaultLayout from '../layouts/DefaultLayout.astro';
         const [hour, minute] = option.value.split(':').map(Number);
         const optionTime = hour * 60 + minute;
         
-        if (isToday && optionTime <= currentTime) {
+        // Solo deshabilitar si es hoy Y la hora ya pasó (con 30 minutos de buffer)
+        if (isToday && optionTime <= (currentTime + 30)) {
           option.disabled = true;
           option.style.color = '#999';
+          // Marcar como hora pasada en el texto
+          if (!option.textContent.includes('(hora pasada)')) {
+            const baseText = option.textContent.split(' - ')[0];
+            option.textContent = `${baseText} - (hora pasada)`;
+          }
         } else {
-          option.disabled = false;
-          option.style.color = '';
+          // Solo rehabilitar si no está deshabilitada por falta de disponibilidad
+          if (!option.textContent.includes('Lleno') && !option.textContent.includes('Insuficiente')) {
+            option.disabled = false;
+            option.style.color = '';
+          }
         }
       });
     }
@@ -238,6 +247,8 @@ import DefaultLayout from '../layouts/DefaultLayout.astro';
           const data = await response.json();
           const horarios = data.horarios;
           
+          console.log('Datos de disponibilidad recibidos:', data); // Debug
+          
           // Actualizar cada opción de hora
           Array.from(horaSelect.options).forEach(option => {
             if (option.value === '') return;
@@ -246,23 +257,36 @@ import DefaultLayout from '../layouts/DefaultLayout.astro';
             const disponibilidad = horarios[hora];
             
             if (disponibilidad) {
-              const { espaciosDisponibles, disponibleParaGrupo, estado } = disponibilidad;
+              const { espaciosDisponibles, disponibleParaGrupo, estado, personasReservadas, capacidadMaxima } = disponibilidad;
+              
+              console.log(`Hora ${hora}:`, disponibilidad); // Debug
+              
+              // Restablecer texto base
+              const baseText = hora;
               
               if (estado === 'lleno') {
+                option.textContent = `${baseText} - Lleno (${personasReservadas}/${capacidadMaxima})`;
+                option.style.color = '#dc2626';
                 option.disabled = true;
-                option.textContent = `${hora} - Lleno`;
-                option.style.color = '#999';
               } else if (estado === 'insuficiente') {
-                option.disabled = true;
-                option.textContent = `${hora} - Insuficiente (${espaciosDisponibles} disponibles)`;
+                option.textContent = `${baseText} - Insuficiente (${espaciosDisponibles} disponibles)`;
                 option.style.color = '#f59e0b';
+                option.disabled = true;
               } else {
+                option.textContent = `${baseText} - ${espaciosDisponibles} lugares disponibles`;
+                option.style.color = '#059669';
                 option.disabled = false;
-                option.textContent = `${hora} - ${espaciosDisponibles} lugares disponibles`;
-                option.style.color = '';
               }
+            } else {
+              // Si no hay datos para esta hora, probablemente no está en la configuración
+              option.textContent = `${option.value} - No disponible`;
+              option.style.color = '#6b7280';
+              option.disabled = true;
             }
           });
+          
+          // Aplicar filtro de horas pasadas después de actualizar disponibilidad
+          filterPastHours();
         }
       } catch (error) {
         console.error('Error al actualizar disponibilidad:', error);
