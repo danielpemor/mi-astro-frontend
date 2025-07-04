@@ -166,13 +166,30 @@ import DefaultLayout from '../layouts/DefaultLayout.astro';
     const fechaInput = document.getElementById('fecha');
     const horaSelect = document.getElementById('hora');
     
+    // Guardar los textos originales de las opciones
+    const opcionesOriginales = {};
+    Array.from(horaSelect.options).forEach(option => {
+      if (option.value) {
+        opcionesOriginales[option.value] = option.value;
+      }
+    });
+    
     // Verificar disponibilidad al cambiar fecha
     async function checkAvailability() {
       const fecha = fechaInput.value;
-      if (!fecha) return;
+      if (!fecha) {
+        // Restaurar opciones originales si no hay fecha
+        Array.from(horaSelect.options).forEach(option => {
+          if (option.value) {
+            option.disabled = false;
+            option.textContent = opcionesOriginales[option.value];
+            option.classList.remove('text-gray-400');
+          }
+        });
+        return;
+      }
       
       // Obtener hora actual del navegador
-            // Obtener hora actual del navegador
       const now = new Date();
       const horaCliente = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
       
@@ -191,13 +208,16 @@ import DefaultLayout from '../layouts/DefaultLayout.astro';
             
             if (horaInfo.pasado) {
               option.disabled = true;
-              option.textContent = `${option.value} - Ya pasó`;
+              option.textContent = opcionesOriginales[option.value];
+              option.classList.add('text-gray-400');
             } else if (horaInfo.completo) {
               option.disabled = true;
-              option.textContent = `${option.value} - Completo`;
+              option.textContent = opcionesOriginales[option.value];
+              option.classList.add('text-gray-400');
             } else {
               option.disabled = false;
-              option.textContent = option.value;
+              option.textContent = opcionesOriginales[option.value];
+              option.classList.remove('text-gray-400');
             }
           }
         });
@@ -240,6 +260,14 @@ import DefaultLayout from '../layouts/DefaultLayout.astro';
           if (response.ok) {
             alert('¡Reserva recibida con éxito! Te contactaremos para confirmar tu reserva.');
             form.reset();
+            // Limpiar estilos de las opciones
+            Array.from(horaSelect.options).forEach(option => {
+              if (option.value) {
+                option.disabled = false;
+                option.textContent = opcionesOriginales[option.value];
+                option.classList.remove('text-gray-400');
+              }
+            });
           } else {
             const errorData = await response.json();
             
@@ -272,7 +300,16 @@ import DefaultLayout from '../layouts/DefaultLayout.astro';
 <style>
   /* Estilos para opciones deshabilitadas */
   select option:disabled {
-    color: #ef4444;
-    font-style: italic;
+    color: #9ca3af !important;
+    cursor: not-allowed;
+  }
+  
+  select option.text-gray-400 {
+    color: #9ca3af !important;
+  }
+  
+  /* Mejorar apariencia del select cuando tiene opciones deshabilitadas */
+  select:has(option:disabled) {
+    cursor: pointer;
   }
 </style>

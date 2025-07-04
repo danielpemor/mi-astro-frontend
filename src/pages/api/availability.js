@@ -49,7 +49,7 @@ export async function GET({ url }) {
   try {
     const searchParams = new URL(url).searchParams;
     const fecha = searchParams.get('fecha');
-    const horaCliente = searchParams.get('horaCliente'); // Hora del navegador
+    const horaCliente = searchParams.get('horaCliente');
 
     if (!fecha) {
       return new Response(JSON.stringify({ error: 'Fecha requerida' }), { 
@@ -80,15 +80,22 @@ export async function GET({ url }) {
       }
     });
 
+    // Verificar si es hoy
+    const fechaSeleccionada = new Date(fecha + 'T00:00:00');
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const esHoy = fechaSeleccionada.getTime() === hoy.getTime();
+    
+    console.log('Fecha seleccionada:', fecha, 'Es hoy?', esHoy);
+
     // Calcular disponibilidad
     const horarios = {};
-    const esHoy = new Date(fecha).toDateString() === new Date().toDateString();
     
     Object.entries(capacidadConfig).forEach(([hora, capacidad]) => {
       const reservadas = reservasPorHora[hora] || 0;
       const disponible = capacidad > reservadas;
       
-      // Si es hoy y se envió la hora del cliente, verificar si ya pasó
+      // Solo marcar como pasado si es HOY
       let yaPaso = false;
       if (esHoy && horaCliente) {
         const [clienteHora, clienteMinutos] = horaCliente.split(':').map(Number);
