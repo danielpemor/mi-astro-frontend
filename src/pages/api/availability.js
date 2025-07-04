@@ -16,7 +16,10 @@ const CAPACIDAD_DEFAULT = {
 };
 
 async function obtenerConfiguracionCapacidad(fecha) {
-  const diaSemana = new Date(fecha).getDay().toString();
+  // Parsear fecha correctamente para evitar problemas de zona horaria
+  const [year, month, day] = fecha.split('-').map(Number);
+  const fechaLocal = new Date(year, month - 1, day);
+  const diaSemana = fechaLocal.getDay().toString();
 
   try {
     // Intentar obtener configuración específica por fecha
@@ -50,6 +53,7 @@ export async function GET({ url }) {
     const searchParams = new URL(url).searchParams;
     const fecha = searchParams.get('fecha');
     const horaCliente = searchParams.get('horaCliente');
+    const fechaClienteStr = searchParams.get('fechaCliente'); // Nueva: fecha actual del cliente
 
     if (!fecha) {
       return new Response(JSON.stringify({ error: 'Fecha requerida' }), { 
@@ -80,13 +84,12 @@ export async function GET({ url }) {
       }
     });
 
-    // Verificar si es hoy
-    const fechaSeleccionada = new Date(fecha + 'T00:00:00');
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
-    const esHoy = fechaSeleccionada.getTime() === hoy.getTime();
+    // Verificar si es hoy usando la fecha del cliente
+    const esHoy = fecha === fechaClienteStr;
     
-    console.log('Fecha seleccionada:', fecha, 'Es hoy?', esHoy);
+    console.log('Fecha seleccionada:', fecha);
+    console.log('Fecha del cliente:', fechaClienteStr);
+    console.log('Es hoy?', esHoy);
 
     // Calcular disponibilidad
     const horarios = {};
@@ -103,6 +106,8 @@ export async function GET({ url }) {
         const ahora = clienteHora * 60 + clienteMinutos + 30; // 30 min margen
         const slot = horaSlot * 60 + minutosSlot;
         yaPaso = slot < ahora;
+        
+        console.log(`Hora ${hora}: slot=${slot}, ahora=${ahora}, yaPaso=${yaPaso}`);
       }
 
       horarios[hora] = {
@@ -112,7 +117,7 @@ export async function GET({ url }) {
       };
     });
 
-    return new Response(JSON.stringify({ horarios }), {
+    return new Response(JSON.stringify({ horarios, debug: { fecha, fechaClienteStr, esHoy } }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
