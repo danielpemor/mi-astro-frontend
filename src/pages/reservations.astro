@@ -3,10 +3,8 @@ import DefaultLayout from '../layouts/DefaultLayout.astro';
 ---
 
 <DefaultLayout title="Reservaciones - Restaurante">
-  <!-- Espaciador para navbar fijo -->
   <div class="h-20"></div>
 
-  <!-- Cabecera -->
   <div class="bg-gray-50 py-16">
     <div class="container mx-auto px-4 text-center">
       <h1 class="text-4xl md:text-5xl font-bold mb-4">Reservaciones</h1>
@@ -16,7 +14,6 @@ import DefaultLayout from '../layouts/DefaultLayout.astro';
     </div>
   </div>
 
-  <!-- Formulario -->
   <section class="py-20">
     <div class="container mx-auto px-4 max-w-4xl">
       <div class="bg-white rounded-lg shadow-lg overflow-hidden">
@@ -27,69 +24,39 @@ import DefaultLayout from '../layouts/DefaultLayout.astro';
             <!-- Nombre / Teléfono -->
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label for="nombre" class="block text-sm font-medium text-gray-700 mb-1">
-                  Nombre completo
-                </label>
-                <input
-                  id="nombre"
-                  name="nombre"
-                  type="text"
-                  required
-                  placeholder="Tu nombre"
-                  class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[var(--primaryColor)] focus:border-transparent"
-                >
+                <label for="nombre" class="block text-sm font-medium text-gray-700 mb-1">Nombre completo</label>
+                <input id="nombre" name="nombre" type="text" required placeholder="Tu nombre"
+                  class="w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-[var(--primaryColor)] focus:border-transparent"/>
               </div>
-
               <div>
-                <label for="telefono" class="block text-sm font-medium text-gray-700 mb-1">
-                  Teléfono
-                </label>
-                <input
-                  id="telefono"
-                  name="telefono"
-                  type="tel"
-                  required
-                  placeholder="Tu número de teléfono"
-                  class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[var(--primaryColor)] focus:border-transparent"
-                >
+                <label for="telefono" class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                <input id="telefono" name="telefono" type="tel" required placeholder="Tu teléfono"
+                  class="w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-[var(--primaryColor)] focus:border-transparent"/>
               </div>
             </div>
 
             <!-- Email -->
             <div>
               <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                required
-                placeholder="Tu correo electrónico"
-                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[var(--primaryColor)] focus:border-transparent"
-              >
+              <input id="email" name="email" type="email" required placeholder="Tu correo"
+                class="w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-[var(--primaryColor)] focus:border-transparent"/>
             </div>
 
             <!-- Fecha / Hora / Personas -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <!-- Fecha -->
               <div>
                 <label for="fecha" class="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
-                <input
-                  id="fecha"
-                  name="fecha"
-                  type="date"
-                  required
+                <input id="fecha" name="fecha" type="date" required
                   min={new Date().toISOString().split('T')[0]}
-                  class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[var(--primaryColor)] focus:border-transparent"
-                >
+                  class="w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-[var(--primaryColor)] focus:border-transparent"/>
               </div>
 
+              <!-- Hora -->
               <div>
                 <label for="hora" class="block text-sm font-medium text-gray-700 mb-1">Hora</label>
-                <select
-                  id="hora"
-                  name="hora"
-                  required
-                  class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[var(--primaryColor)] focus:border-transparent"
-                >
+                <select id="hora" name="hora" required
+                  class="w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-[var(--primaryColor)] focus:border-transparent">
                   <option value="">Selecciona una hora</option>
                   <option value="10:00">10:00</option>
                   <option value="10:30">10:30</option>
@@ -108,29 +75,17 @@ import DefaultLayout from '../layouts/DefaultLayout.astro';
                   <option value="20:30">20:30</option>
                   <option value="21:00">21:00</option>
                   <option value="21:30">21:30</option>
+                  <option value="22:00">22:00</option>
                 </select>
                 <div id="avisoCupo" class="text-sm text-gray-600 mt-1"></div>
               </div>
 
+              <!-- Personas -->
               <div>
-                <label for="personas" class="block text-sm font-medium text-gray-700 mb-1">
-                  Número de personas
-                </label>
-                <select
-                  id="personas"
-                  name="personas"
-                  required
-                  class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[var(--primaryColor)] focus:border-transparent"
-                >
+                <label for="personas" class="block text-sm font-medium text-gray-700 mb-1">Número de personas</label>
+                <select id="personas" name="personas" required
+                  class="w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-[var(--primaryColor)] focus:border-transparent">
                   <option value="">Selecciona</option>
-                  <option value="1">1 persona</option>
-                  <option value="2">2 personas</option>
-                  <option value="3">3 personas</option>
-                  <option value="4">4 personas</option>
-                  <option value="5">5 personas</option>
-                  <option value="6">6 personas</option>
-                  <option value="7">7 personas</option>
-                  <option value="8">8 personas</option>
                 </select>
               </div>
             </div>
@@ -138,36 +93,29 @@ import DefaultLayout from '../layouts/DefaultLayout.astro';
             <!-- Comentarios -->
             <div>
               <label for="comentarios" class="block text-sm font-medium text-gray-700 mb-1">
-                Comentarios adicionales (alergias, ocasión especial, etc.)
+                Comentarios adicionales
               </label>
-              <textarea
-                id="comentarios"
-                name="comentarios"
-                rows="3"
-                placeholder="Indícanos cualquier necesidad especial..."
-                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-[var(--primaryColor)] focus:border-transparent"
-              ></textarea>
+              <textarea id="comentarios" name="comentarios" rows="3" placeholder="Alergias u ocasión especial..."
+                class="w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-[var(--primaryColor)] focus:border-transparent"></textarea>
             </div>
 
-            <button
-              type="submit"
-              id="submitBtn"
-              class="w-full bg-[var(--primaryColor)] text-white py-3 px-6 rounded-md hover:bg-[var(--secondaryColor)] transition-colors duration-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+            <button type="submit" id="submitBtn"
+              class="w-full bg-[var(--primaryColor)] text-white py-3 rounded-md hover:bg-[var(--secondaryColor)] transition disabled:opacity-50 disabled:cursor-not-allowed">
               Confirmar reserva
             </button>
           </form>
+
         </div>
       </div>
 
-      <!-- Información adicional (sin horarios) -->
+      <!-- Información adicional -->
       <div class="mt-12 text-center">
         <h3 class="text-xl font-bold mb-4">Información adicional</h3>
         <ul class="space-y-2 text-gray-600 max-w-2xl mx-auto">
-          <li>• Tu reserva será confirmada por teléfono o email dentro de las próximas 24&nbsp;horas.</li>
-          <li>• Mantén tu teléfono disponible para confirmación.</li>
-          <li>• Las reservas están sujetas a disponibilidad.</li>
-          <li>• Para grupos grandes (más de 8 personas), por favor contacta directamente al restaurante.</li>
+          <li>Tu reserva será confirmada por teléfono o email en las próximas 24 horas.</li>
+          <li>Mantén tu teléfono disponible para confirmación.</li>
+          <li>Las reservas están sujetas a disponibilidad.</li>
+          <li>Para grupos mayores a 8 personas, contacta directamente al restaurante.</li>
         </ul>
       </div>
     </div>
@@ -176,105 +124,96 @@ import DefaultLayout from '../layouts/DefaultLayout.astro';
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-  const form        = document.getElementById('reservationForm');
-  const fechaEl     = document.getElementById('fecha');
-  const horaEl      = document.getElementById('hora');
-  const personasEl  = document.getElementById('personas');
-  const avisoCupo   = document.getElementById('avisoCupo');
-  const submitBtn   = document.getElementById('submitBtn');
+  const form       = document.getElementById('reservationForm');
+  const fechaEl    = document.getElementById('fecha');
+  const horaEl     = document.getElementById('hora');
+  const personasEl = document.getElementById('personas');
+  const avisoCupo  = document.getElementById('avisoCupo');
+  const submitBtn  = document.getElementById('submitBtn');
 
-  /* --- helpers --- */
-  const hoyISO = new Date().toISOString().slice(0,10);
-  const minutos = hs => { const [h,m]=hs.split(':').map(Number); return h*60+m; };
-
-  // guardaremos un mapa hora -> cupoReal
+  // Guarda el cupo real por hora
   let cupoPorHora = {};
 
-  /* ---------- cargar horarios según fecha ---------- */
+  // Convierte "HH:MM" a minutos
+  const toMin = s => {
+    const [h, m] = s.split(':').map(Number);
+    return h*60 + m;
+  };
+
+  // Refresca los horarios según la fecha
   async function refrescarHorarios() {
     const fecha = fechaEl.value;
     if (!fecha) return;
 
-    const res  = await fetch(`/api/availability?fecha=${fecha}&personas=1`);
+    // Deshabilita selects hasta que cargue
+    horaEl.disabled = true;
+    personasEl.disabled = true;
+    avisoCupo.textContent = 'Cargando disponibilidad...';
+
+    // Zona del cliente
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const res = await fetch(`/api/availability?fecha=${fecha}&personas=1&tz=${encodeURIComponent(tz)}`);
     const data = await res.json();
     const horarios = data.horarios || {};
 
-    cupoPorHora = {};                              // reiniciar mapa
+    // Zona y hora actual en minutos
+    const now = new Date().toLocaleString('en-US', { timeZone: tz });
+    const actuales = new Date(now);
+    const hoy = actuales.toISOString().slice(0,10);
+    const minNow = actuales.getHours()*60 + actuales.getMinutes();
 
-    // hora actual MX si es hoy
-    const ahora = new Date().toLocaleString('en-US',{timeZone:'America/Mexico_City'});
-    const ahoraMin = minutos(new Date(ahora).toTimeString().slice(0,5));
-    const esHoy    = fecha === hoyISO;
-
-    // reset selector hora
-    const opts = horaEl.querySelectorAll('option[value]');
-    opts.forEach(opt => {
+    cupoPorHora = {};
+    // Actualiza cada opción de hora
+    horaEl.querySelectorAll('option[value]').forEach(opt => {
       const h = opt.value;
       const info = horarios[h];
-      if (!info) { opt.hidden = true; return; }
-
-      const pasada = esHoy && minutos(h) <= ahoraMin;
-      const sinLugar = info.espaciosDisponibles === 0;
-
-      opt.hidden = pasada || sinLugar;
-      if (!opt.hidden) {
-        cupoPorHora[h] = info.espaciosDisponibles; // guarda cupo real
+      if (!info) {
+        opt.hidden = true;
+        return;
       }
+      // Ocultar si ya pasó hoy o si no quedan lugares
+      const pasada = (fecha === hoy) && toMin(h) <= minNow;
+      const llena  = info.espaciosDisponibles === 0;
+      opt.hidden = pasada || llena;
+
+      // Guarda cupo real
+      if (!opt.hidden) cupoPorHora[h] = info.espaciosDisponibles;
     });
 
+    // Reactiva
+    horaEl.disabled = false;
+    personasEl.disabled = false;
+    avisoCupo.textContent = '';
     horaEl.value = '';
     personasEl.innerHTML = '<option value="">Selecciona</option>';
-    avisoCupo.textContent = '';
   }
 
-  /* ---------- construir selector personas ---------- */
-  function construirPersonas(max) {
-    const limite = Math.min(max, 8);               // tope absoluto 8
+  // Al cambiar hora, genera selector personas y aviso
+  function onHoraChange() {
+    const h = horaEl.value;
+    if (!h) {
+      avisoCupo.textContent = '';
+      personasEl.innerHTML = '<option value="">Selecciona</option>';
+      return;
+    }
+    const real = cupoPorHora[h] || 0;
+    const max  = Math.min(real, 8);
+    // Reconstruye personas
     let html = '<option value="">Selecciona</option>';
-    for (let i = 1; i <= limite; i++) {
+    for (let i = 1; i <= max; i++) {
       html += `<option value="${i}">${i} persona${i>1?'s':''}</option>`;
     }
     personasEl.innerHTML = html;
+    avisoCupo.textContent = `Quedan ${real} lugar${real>1?'es':''} disponibles.`;
   }
 
-  /* ---------- al cambiar hora ---------- */
-  function onHoraChange() {
-    const h = horaEl.value;
-    if (!h) { avisoCupo.textContent=''; return; }
-
-    const cupoReal = cupoPorHora[h] || 1;
-    construirPersonas(cupoReal);
-
-    avisoCupo.textContent =
-      `Quedan ${cupoReal} lugar${cupoReal>1?'es':''} disponibles.`;
-  }
-
-  /* ---------- al cambiar personas ---------- */
-  function onPersonasChange() {
-    const h = horaEl.value;
-    if (!h) return;
-
-    const cupoReal = cupoPorHora[h] || 1;
-    const sel = parseInt(personasEl.value || '0', 10);
-
-    // si usuario elige más del disponible, recortamos
-    if (sel > cupoReal) {
-      personasEl.value = cupoReal;
-    }
-
-    const quedan = cupoReal - (parseInt(personasEl.value||'0',10) || 0);
-    avisoCupo.textContent =
-      `Quedan ${quedan} lugar${quedan!==1?'es':''} disponibles.`;
-  }
-
-  /* ---------- envío del formulario ---------- */
+  // Envío de formulario
   form.addEventListener('submit', async e => {
     e.preventDefault();
     submitBtn.disabled = true;
     submitBtn.textContent = 'Enviando…';
 
     const datos = Object.fromEntries(new FormData(form).entries());
-
     try {
       const r = await fetch('/api/reservations', {
         method:'POST',
@@ -297,12 +236,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  /* listeners */
+  // Listeners
   fechaEl.addEventListener('change', refrescarHorarios);
-  horaEl .addEventListener('change', onHoraChange);
-  personasEl.addEventListener('change', onPersonasChange);
+  horaEl.addEventListener('change', onHoraChange);
 
-  /* inicial si el date ya trae valor */
+  // Precarga si había fecha
   if (fechaEl.value) refrescarHorarios();
 });
 </script>
