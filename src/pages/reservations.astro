@@ -25,6 +25,17 @@ const openingHours = await getOpeningHours();
         <div class="p-8">
           <h2 class="text-2xl font-bold mb-6 text-center">Haz tu reserva</h2>
           
+          <!-- Indicador de disponibilidad -->
+          <div id="availabilityIndicator" class="hidden mb-6 p-4 rounded-lg bg-blue-50 border border-blue-200">
+            <div class="flex items-center justify-center space-x-2">
+              <svg class="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span class="text-blue-600 font-medium">Verificando disponibilidad...</span>
+            </div>
+          </div>
+          
           <form id="reservationForm" class="space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
@@ -78,53 +89,42 @@ const openingHours = await getOpeningHours();
               </div>
               
               <div>
-                <label for="hora" class="block text-sm font-medium text-gray-700 mb-1">Hora</label>
+                <label for="hora" class="block text-sm font-medium text-gray-700 mb-1">
+                  Hora
+                  <span id="horaInfo" class="text-xs text-gray-500 ml-1"></span>
+                </label>
                 <select 
                   id="hora" 
                   name="hora" 
                   required
-                  class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--primaryColor)] focus:border-transparent"
+                  disabled
+                  class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--primaryColor)] focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
-                  <option value="">Selecciona una hora</option>
-                  <option value="10:00">10:00</option>
-                  <option value="10:30">10:30</option>
-                  <option value="11:00">11:00</option>
-                  <option value="11:30">11:30</option>
-                  <option value="12:00">12:00</option>
-                  <option value="12:30">12:30</option>
-                  <option value="13:00">13:00</option>
-                  <option value="13:30">13:30</option>
-                  <option value="14:00">14:00</option>
-                  <option value="14:30">14:30</option>
-                  <option value="15:00">15:00</option>
-                  <option value="19:00">19:00</option>
-                  <option value="19:30">19:30</option>
-                  <option value="20:00">20:00</option>
-                  <option value="20:30">20:30</option>
-                  <option value="21:00">21:00</option>
-                  <option value="21:30">21:30</option>
+                  <option value="">Primero selecciona una fecha</option>
                 </select>
               </div>
               
               <div>
-                <label for="personas" class="block text-sm font-medium text-gray-700 mb-1">Número de personas</label>
+                <label for="personas" class="block text-sm font-medium text-gray-700 mb-1">
+                  Número de personas
+                  <span id="personasInfo" class="text-xs text-gray-500 ml-1"></span>
+                </label>
                 <select 
                   id="personas" 
                   name="personas" 
                   required
-                  class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--primaryColor)] focus:border-transparent"
+                  disabled
+                  class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--primaryColor)] focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
                 >
-                  <option value="">Selecciona</option>
-                  <option value="1">1 persona</option>
-                  <option value="2">2 personas</option>
-                  <option value="3">3 personas</option>
-                  <option value="4">4 personas</option>
-                  <option value="5">5 personas</option>
-                  <option value="6">6 personas</option>
-                  <option value="7">7 personas</option>
-                  <option value="8">8 personas</option>
+                  <option value="">Primero selecciona fecha y hora</option>
                 </select>
               </div>
+            </div>
+            
+            <!-- Resumen de disponibilidad -->
+            <div id="availabilitySummary" class="hidden p-4 rounded-lg">
+              <h4 class="font-medium mb-2">Disponibilidad del día</h4>
+              <div id="hourlyAvailability" class="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm"></div>
             </div>
             
             <div>
@@ -141,6 +141,7 @@ const openingHours = await getOpeningHours();
             <button 
               type="submit" 
               id="submitBtn"
+              disabled
               class="w-full bg-[var(--primaryColor)] text-white py-3 px-6 rounded-md hover:bg-[var(--secondaryColor)] transition-colors duration-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Confirmar reserva
@@ -154,7 +155,7 @@ const openingHours = await getOpeningHours();
         <h3 class="text-xl font-bold mb-4">Información adicional</h3>
         <ul class="space-y-2 text-gray-600 max-w-2xl mx-auto">
           <li>• Tu reserva será confirmada por teléfono o email dentro de las próximas 24 horas.</li>
-          <li>• Mantén tu teléfono disponible para confirmación.</li>
+          <li>• La disponibilidad se actualiza en tiempo real.</li>
           <li>• Las reservas están sujetas a disponibilidad.</li>
           <li>• Para grupos grandes (más de 8 personas), por favor contacta directamente al restaurante.</li>
         </ul>
@@ -194,11 +195,189 @@ const openingHours = await getOpeningHours();
 </DefaultLayout>
 
 <script>
-  // Formulario de reservación
+  // Sistema de disponibilidad en tiempo real
+  let availabilityData = null;
+  let selectedHour = null;
+  
   document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('reservationForm');
     const submitBtn = document.getElementById('submitBtn');
+    const fechaInput = document.getElementById('fecha');
+    const horaSelect = document.getElementById('hora');
+    const personasSelect = document.getElementById('personas');
+    const availabilityIndicator = document.getElementById('availabilityIndicator');
+    const availabilitySummary = document.getElementById('availabilitySummary');
+    const hourlyAvailability = document.getElementById('hourlyAvailability');
     
+    // Función para verificar disponibilidad
+    async function checkAvailability(fecha) {
+      if (!fecha) return;
+      
+      // Mostrar indicador de carga
+      availabilityIndicator.classList.remove('hidden');
+      availabilitySummary.classList.add('hidden');
+      horaSelect.disabled = true;
+      personasSelect.disabled = true;
+      submitBtn.disabled = true;
+      
+      try {
+        const response = await fetch(`/api/availability?fecha=${fecha}&personas=1`);
+        if (!response.ok) throw new Error('Error al verificar disponibilidad');
+        
+        availabilityData = await response.json();
+        console.log('Disponibilidad:', availabilityData);
+        
+        // Actualizar selector de hora
+        updateHourSelector();
+        
+        // Mostrar resumen de disponibilidad
+        showAvailabilitySummary();
+        
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Error al verificar la disponibilidad. Por favor, intenta de nuevo.');
+      } finally {
+        availabilityIndicator.classList.add('hidden');
+      }
+    }
+    
+    // Actualizar selector de hora con disponibilidad
+    function updateHourSelector() {
+      horaSelect.innerHTML = '<option value="">Selecciona una hora</option>';
+      horaSelect.disabled = false;
+      
+      let hasAvailableHours = false;
+      
+      Object.entries(availabilityData.horarios).forEach(([hora, info]) => {
+        const option = document.createElement('option');
+        option.value = hora;
+        
+        if (info.espaciosDisponibles === 0) {
+          option.disabled = true;
+          option.textContent = `${hora} - COMPLETO`;
+          option.classList.add('text-red-500');
+        } else if (info.espaciosDisponibles <= 5) {
+          option.textContent = `${hora} - Solo ${info.espaciosDisponibles} lugares`;
+          option.classList.add('text-orange-500');
+          hasAvailableHours = true;
+        } else {
+          option.textContent = `${hora} - ${info.espaciosDisponibles} lugares disponibles`;
+          option.classList.add('text-green-600');
+          hasAvailableHours = true;
+        }
+        
+        horaSelect.appendChild(option);
+      });
+      
+      if (!hasAvailableHours) {
+        horaSelect.innerHTML = '<option value="">No hay horarios disponibles para esta fecha</option>';
+        horaSelect.disabled = true;
+      }
+      
+      // Actualizar info
+      document.getElementById('horaInfo').textContent = hasAvailableHours ? '(selecciona para ver disponibilidad)' : '';
+    }
+    
+    // Mostrar resumen de disponibilidad
+    function showAvailabilitySummary() {
+      hourlyAvailability.innerHTML = '';
+      availabilitySummary.classList.remove('hidden');
+      
+      Object.entries(availabilityData.horarios).forEach(([hora, info]) => {
+        const div = document.createElement('div');
+        div.className = 'p-2 rounded text-center ';
+        
+        if (info.espaciosDisponibles === 0) {
+          div.className += 'bg-red-100 text-red-700';
+          div.innerHTML = `<div class="font-medium">${hora}</div><div class="text-xs">Completo</div>`;
+        } else if (info.espaciosDisponibles <= 5) {
+          div.className += 'bg-orange-100 text-orange-700';
+          div.innerHTML = `<div class="font-medium">${hora}</div><div class="text-xs">${info.espaciosDisponibles} lugares</div>`;
+        } else {
+          div.className += 'bg-green-100 text-green-700';
+          div.innerHTML = `<div class="font-medium">${hora}</div><div class="text-xs">${info.espaciosDisponibles} lugares</div>`;
+        }
+        
+        hourlyAvailability.appendChild(div);
+      });
+      
+      // Actualizar clase del contenedor según disponibilidad general
+      if (availabilityData.resumen.horariosDisponibles === 0) {
+                availabilitySummary.className = 'p-4 rounded-lg bg-red-50 border border-red-200';
+      } else if (availabilityData.resumen.horariosDisponibles <= 3) {
+        availabilitySummary.className = 'p-4 rounded-lg bg-orange-50 border border-orange-200';
+      } else {
+        availabilitySummary.className = 'p-4 rounded-lg bg-green-50 border border-green-200';
+      }
+    }
+    
+    // Actualizar selector de personas según hora seleccionada
+    function updatePersonasSelector(hora) {
+      if (!hora || !availabilityData) {
+        personasSelect.innerHTML = '<option value="">Primero selecciona una hora</option>';
+        personasSelect.disabled = true;
+        submitBtn.disabled = true;
+        return;
+      }
+      
+      const horaInfo = availabilityData.horarios[hora];
+      if (!horaInfo || horaInfo.espaciosDisponibles === 0) {
+        personasSelect.innerHTML = '<option value="">No hay disponibilidad para esta hora</option>';
+        personasSelect.disabled = true;
+        submitBtn.disabled = true;
+        return;
+      }
+      
+      personasSelect.innerHTML = '<option value="">Selecciona número de personas</option>';
+      personasSelect.disabled = false;
+      
+      // Generar opciones según disponibilidad
+      const maxPersonas = Math.min(8, horaInfo.espaciosDisponibles);
+      for (let i = 1; i <= maxPersonas; i++) {
+        const option = document.createElement('option');
+        option.value = i;
+        option.textContent = i === 1 ? '1 persona' : `${i} personas`;
+        personasSelect.appendChild(option);
+      }
+      
+      // Actualizar info
+      document.getElementById('personasInfo').textContent = `(máx. ${maxPersonas} disponibles)`;
+      
+      // Guardar hora seleccionada
+      selectedHour = hora;
+    }
+    
+    // Event listener para cambio de fecha
+    fechaInput.addEventListener('change', (e) => {
+      const fecha = e.target.value;
+      if (fecha) {
+        checkAvailability(fecha);
+      } else {
+        // Reset si no hay fecha
+        horaSelect.innerHTML = '<option value="">Primero selecciona una fecha</option>';
+        horaSelect.disabled = true;
+        personasSelect.innerHTML = '<option value="">Primero selecciona fecha y hora</option>';
+        personasSelect.disabled = true;
+        submitBtn.disabled = true;
+        availabilitySummary.classList.add('hidden');
+      }
+    });
+    
+    // Event listener para cambio de hora
+    horaSelect.addEventListener('change', (e) => {
+      updatePersonasSelector(e.target.value);
+    });
+    
+    // Event listener para cambio de personas
+    personasSelect.addEventListener('change', (e) => {
+      if (e.target.value) {
+        submitBtn.disabled = false;
+      } else {
+        submitBtn.disabled = true;
+      }
+    });
+    
+    // Manejo del envío del formulario
     if (form) {
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -222,7 +401,6 @@ const openingHours = await getOpeningHours();
         console.log('Enviando datos de reserva:', reservationData);
         
         try {
-          // Usar la API route de Astro en lugar de llamar directamente a Directus
           const response = await fetch('/api/reservations', {
             method: 'POST',
             headers: {
@@ -236,12 +414,33 @@ const openingHours = await getOpeningHours();
           if (response.ok) {
             const result = await response.json();
             console.log('Reserva creada:', result);
+            
+            // Mostrar mensaje de éxito
             alert('¡Reserva recibida con éxito! Te contactaremos para confirmar tu reserva.');
+            
+            // Resetear formulario
             form.reset();
+            horaSelect.innerHTML = '<option value="">Primero selecciona una fecha</option>';
+            horaSelect.disabled = true;
+            personasSelect.innerHTML = '<option value="">Primero selecciona fecha y hora</option>';
+            personasSelect.disabled = true;
+            submitBtn.disabled = true;
+            availabilitySummary.classList.add('hidden');
+            availabilityData = null;
+            selectedHour = null;
+            
           } else {
             const errorData = await response.json();
             console.error('Error al enviar reserva:', errorData);
-            alert('El horario seleccionado ya alcanzo el limite de su capacidad.');
+            
+            if (response.status === 409) {
+              // Capacidad insuficiente - actualizar disponibilidad
+              alert(`Lo sentimos, la capacidad ha cambiado. Solo quedan ${errorData.disponibles} lugares disponibles para este horario.`);
+              // Recargar disponibilidad
+              checkAvailability(formData.get('fecha'));
+            } else {
+              alert('Error al procesar la reserva. Por favor, intenta de nuevo.');
+            }
           }
         } catch (error) {
           console.error('Error de red:', error);
@@ -255,3 +454,36 @@ const openingHours = await getOpeningHours();
     }
   });
 </script>
+
+<style>
+  /* Estilos para las opciones del select */
+  option:disabled {
+    color: #9ca3af;
+  }
+  
+  option.text-red-500 {
+    color: #ef4444;
+  }
+  
+  option.text-orange-500 {
+    color: #f97316;
+  }
+  
+  option.text-green-600 {
+    color: #16a34a;
+  }
+  
+  /* Animación para el indicador de carga */
+  @keyframes pulse {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+  
+  #availabilityIndicator {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+</style> 
