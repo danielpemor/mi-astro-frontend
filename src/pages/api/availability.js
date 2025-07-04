@@ -1,14 +1,14 @@
 export const prerender = false;
 
-// Configuración de Directus: soporte para env variable
+// Configuración de Directus
 const DIRECTUS_URL =
   process.env.DIRECTUS_URL ||
   process.env.PUBLIC_DIRECTUS_URL ||
   'http://localhost:8055';
 
-// Capacidad máxima por horario (ajusta según tu restaurante)
+// Capacidad máxima por horario
 const CAPACIDAD_MAXIMA = {
-  '10:00': 1,
+  '10:00': 20,
   '10:30': 20,
   '11:00': 20,
   '11:30': 20,
@@ -60,6 +60,20 @@ export async function GET({ url }) {
       });
     }
 
+    // Verificar si la fecha es pasada
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    const fechaReserva = new Date(fecha + 'T00:00:00');
+    
+    if (fechaReserva < hoy) {
+      return new Response(JSON.stringify({
+        error: 'No se pueden hacer reservas para fechas pasadas'
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     // Obtener reservas para esa fecha (excepto canceladas)
     const checkUrl = `${DIRECTUS_URL}/items/reservas?filter[fecha][_eq]=${fecha}&filter[estado][_neq]=cancelada&limit=-1`;
     console.log('Consultando disponibilidad en:', checkUrl);
@@ -88,11 +102,17 @@ export async function GET({ url }) {
 
     // Calcular disponibilidad por horario
     const disponibilidad = {};
+    let totalCapacidad = 0;
+    let totalReservado = 0;
+    
     for (const hora of Object.keys(CAPACIDAD_MAXIMA)) {
       const capacidadMaxima = CAPACIDAD_MAXIMA[hora];
       const personasReservadas = reservasPorHora[hora] || 0;
       const espaciosDisponibles = capacidadMaxima - personasReservadas;
       const disponibleParaGrupo = espaciosDisponibles >= personas;
+      
+      totalCapacidad += capacidadMaxima;
+      totalReservado += personasReservadas;
 
       disponibilidad[hora] = {
         capacidadMaxima,
@@ -105,8 +125,24 @@ export async function GET({ url }) {
             ? 'lleno'
             : espaciosDisponibles < personas
             ? 'insuficiente'
+            : espaciosDisponibles <= 5
+            ? 'casi_lleno'
             : 'disponible'
       };
+    }
+
+    // Si es hoy, filtrar horarios pasados
+    if (fechaReserva.toDateString() === hoy.toDateString()) {
+      const horaActual = new Date();
+      const horaActualStr = `${horaActual.getHours().toString().padStart(2, '0')}:${horaActual.getMinutes().toString().padStart(2, '0')}`;
+      
+      for (const hora of Object.keys(disponibilidad)) {
+        if (hora < horaActualStr) {
+          disponibilidad[hora].estado = 'pasado';
+          disponibilidad[hora].espaciosDisponibles = 0;
+          disponibilidad[hora].disponibleParaGrupo = false;
+        }
+      }
     }
 
     return new Response(JSON.stringify({
@@ -115,11 +151,14 @@ export async function GET({ url }) {
       horarios: disponibilidad,
       resumen: {
         totalHorarios: Object.keys(CAPACIDAD_MAXIMA).length,
-        horariosDisponibles: Object.values(disponibilidad).filter(h => h.disponibleParaGrupo).length,
+        horariosDisponibles: Object.values(disponibilidad).filter(h => h.disponibleParaGrupo && h.estado !== 'pasado').length,
         horariosLlenos: Object.values(disponibilidad).filter(h => h.espaciosDisponibles === 0).length,
         horariosInsuficientes: Object.values(disponibilidad).filter(h =>
           h.espaciosDisponibles > 0 && h.espaciosDisponibles < personas
-        ).length
+        ).length,
+        capacidadTotal: totalCapacidad,
+        personasReservadas: totalReservado,
+        porcentajeOcupacionGeneral: ((totalReservado / totalCapacidad) * 100).toFixed(1)
       }
     }), {
       status: 200,
