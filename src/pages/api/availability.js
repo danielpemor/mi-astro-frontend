@@ -6,8 +6,12 @@ const DIRECTUS_URL =
   process.env.PUBLIC_DIRECTUS_URL ||
   'http://localhost:8055';
 
-// Capacidad máxima por horario
+// Capacidad máxima por horario (agregando horarios de mañana)
 const CAPACIDAD_MAXIMA = {
+  '08:00': 15,
+  '08:30': 15,
+  '09:00': 20,
+  '09:30': 20,
   '10:00': 20,
   '10:30': 20,
   '11:00': 20,
@@ -24,8 +28,7 @@ const CAPACIDAD_MAXIMA = {
   '20:00': 30,
   '20:30': 30,
   '21:00': 25,
-  '21:30': 20,
-  '22:00': 20
+  '21:30': 20
 };
 
 // Función para extraer hora desde datetime
@@ -89,7 +92,7 @@ export async function GET({ url }) {
 
     const reservasData = await response.json();
     const reservas = reservasData.data || [];
-    console.log(`Reservas encontradas: ${reservas.length}`);
+    console.log(`Reservas encontradas para ${fecha}: ${reservas.length}`);
 
     // Agrupar reservas por hora
     const reservasPorHora = {};
@@ -100,16 +103,32 @@ export async function GET({ url }) {
       reservasPorHora[hora] += parseInt(reserva.personas || 1);
     }
 
+    console.log('Reservas por hora:', reservasPorHora);
+
     // Calcular disponibilidad por horario
     const disponibilidad = {};
     let totalCapacidad = 0;
     let totalReservado = 0;
     
+    // Si es hoy, obtener la hora actual con margen de 30 minutos
+    const esHoy = fechaReserva.toDateString() === new Date().toDateString();
+    const ahora = new Date();
+    const horaActualMinutos = ahora.getHours() * 60 + ahora.getMinutes() + 30; // 30 min de margen
+    
     for (const hora of Object.keys(CAPACIDAD_MAXIMA)) {
       const capacidadMaxima = CAPACIDAD_MAXIMA[hora];
       const personasReservadas = reservasPorHora[hora] || 0;
       const espaciosDisponibles = capacidadMaxima - personasReservadas;
-      const disponibleParaGrupo = espaciosDisponibles >= personas;
+      
+      // Verificar si el horario ya pasó (solo si es hoy)
+      let estaPasado = false;
+      if (esHoy) {
+        const [h, m] = hora.split(':').map(Number);
+        const horaMinutos = h * 60 + m;
+        estaPasado = horaMinutos < horaActualMinutos;
+      }
+      
+      const disponibleParaGrupo = !estaPasado && espaciosDisponibles >= personas;
       
       totalCapacidad += capacidadMaxima;
       totalReservado += personasReservadas;
@@ -120,29 +139,11 @@ export async function GET({ url }) {
         espaciosDisponibles,
         disponibleParaGrupo,
         porcentajeOcupacion: ((personasReservadas / capacidadMaxima) * 100).toFixed(1),
-        estado:
-          espaciosDisponibles === 0
-            ? 'lleno'
-            : espaciosDisponibles < personas
-            ? 'insuficiente'
-            : espaciosDisponibles <= 5
-            ? 'casi_lleno'
-            : 'disponible'
+        estado: estaPasado ? 'pasado' :
+          espaciosDisponibles === 0 ? 'lleno' :
+          espaciosDisponibles < personas ? 'insuficiente' :
+          espaciosDisponibles <= 5 ? 'casi_lleno' : 'disponible'
       };
-    }
-
-    // Si es hoy, filtrar horarios pasados
-    if (fechaReserva.toDateString() === hoy.toDateString()) {
-      const horaActual = new Date();
-      const horaActualStr = `${horaActual.getHours().toString().padStart(2, '0')}:${horaActual.getMinutes().toString().padStart(2, '0')}`;
-      
-      for (const hora of Object.keys(disponibilidad)) {
-        if (hora < horaActualStr) {
-          disponibilidad[hora].estado = 'pasado';
-          disponibilidad[hora].espaciosDisponibles = 0;
-          disponibilidad[hora].disponibleParaGrupo = false;
-        }
-      }
     }
 
     return new Response(JSON.stringify({
@@ -151,10 +152,10 @@ export async function GET({ url }) {
       horarios: disponibilidad,
       resumen: {
         totalHorarios: Object.keys(CAPACIDAD_MAXIMA).length,
-        horariosDisponibles: Object.values(disponibilidad).filter(h => h.disponibleParaGrupo && h.estado !== 'pasado').length,
+        horariosDisponibles: Object.values(disponibilidad).filter(h => h.disponibleParaGrupo).length,
         horariosLlenos: Object.values(disponibilidad).filter(h => h.espaciosDisponibles === 0).length,
         horariosInsuficientes: Object.values(disponibilidad).filter(h =>
-          h.espaciosDisponibles > 0 && h.espaciosDisponibles < personas
+          h.espaciosDisponibles > 0 && h.espaciosDisponibles < personas && h.estado !== 'pasado'
         ).length,
         capacidadTotal: totalCapacidad,
         personasReservadas: totalReservado,

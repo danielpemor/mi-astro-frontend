@@ -1,204 +1,10 @@
----
-// src/pages/reservations.astro
-import DefaultLayout from '../layouts/DefaultLayout.astro';
-import { getOpeningHours } from '../lib/directus';
-
-const openingHours = await getOpeningHours();
----
-
-<DefaultLayout title="Reservaciones - Restaurante">
-  <!-- Espaciador para navbar fijo -->
-  <div class="h-20"></div>
-  
-  <!-- Cabecera de la página -->
-  <div class="bg-gray-50 py-16">
-    <div class="container mx-auto px-4 text-center">
-      <h1 class="text-4xl md:text-5xl font-bold mb-4">Reservaciones</h1>
-      <p class="text-gray-600 max-w-2xl mx-auto">Reserva tu mesa y disfruta de una experiencia gastronómica inolvidable.</p>
-    </div>
-  </div>
-  
-  <!-- Formulario de reservación -->
-  <section class="py-20">
-    <div class="container mx-auto px-4 max-w-4xl">
-      <div class="bg-white rounded-lg shadow-lg overflow-hidden">
-        <div class="p-8">
-          <h2 class="text-2xl font-bold mb-6 text-center">Haz tu reserva</h2>
-          
-          <!-- Indicador de disponibilidad -->
-          <div id="availabilityIndicator" class="hidden mb-6 p-4 rounded-lg bg-blue-50 border border-blue-200">
-            <div class="flex items-center justify-center space-x-2">
-              <svg class="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              <span class="text-blue-600 font-medium">Verificando disponibilidad...</span>
-            </div>
-          </div>
-          
-          <form id="reservationForm" class="space-y-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label for="nombre" class="block text-sm font-medium text-gray-700 mb-1">Nombre completo</label>
-                <input 
-                  type="text" 
-                  id="nombre" 
-                  name="nombre" 
-                  required
-                  class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--primaryColor)] focus:border-transparent"
-                  placeholder="Tu nombre"
-                >
-              </div>
-              
-              <div>
-                <label for="telefono" class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
-                <input 
-                  type="tel" 
-                  id="telefono" 
-                  name="telefono"
-                  required
-                  class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--primaryColor)] focus:border-transparent"
-                  placeholder="Tu número de teléfono"
-                >
-              </div>
-            </div>
-            
-            <div>
-              <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input 
-                type="email" 
-                id="email" 
-                name="email" 
-                required
-                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--primaryColor)] focus:border-transparent"
-                placeholder="Tu correo electrónico"
-              >
-            </div>
-            
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <label for="fecha" class="block text-sm font-medium text-gray-700 mb-1">Fecha</label>
-                <input 
-                  type="date" 
-                  id="fecha" 
-                  name="fecha" 
-                  required
-                  min={new Date().toISOString().split('T')[0]}
-                  class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--primaryColor)] focus:border-transparent"
-                >
-              </div>
-              
-              <div>
-                <label for="hora" class="block text-sm font-medium text-gray-700 mb-1">
-                  Hora
-                  <span id="horaInfo" class="text-xs text-gray-500 ml-1"></span>
-                </label>
-                <select 
-                  id="hora" 
-                  name="hora" 
-                  required
-                  disabled
-                  class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--primaryColor)] focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
-                >
-                  <option value="">Primero selecciona una fecha</option>
-                </select>
-              </div>
-              
-              <div>
-                <label for="personas" class="block text-sm font-medium text-gray-700 mb-1">
-                  Número de personas
-                  <span id="personasInfo" class="text-xs text-gray-500 ml-1"></span>
-                </label>
-                <select 
-                  id="personas" 
-                  name="personas" 
-                  required
-                  disabled
-                  class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--primaryColor)] focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
-                >
-                  <option value="">Primero selecciona fecha y hora</option>
-                </select>
-              </div>
-            </div>
-            
-            <!-- Resumen de disponibilidad -->
-            <div id="availabilitySummary" class="hidden p-4 rounded-lg">
-              <h4 class="font-medium mb-2">Disponibilidad del día</h4>
-              <div id="hourlyAvailability" class="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm"></div>
-            </div>
-            
-            <div>
-              <label for="comentarios" class="block text-sm font-medium text-gray-700 mb-1">Comentarios adicionales (alergias, ocasión especial, etc.)</label>
-              <textarea 
-                id="comentarios" 
-                name="comentarios" 
-                rows="3"
-                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--primaryColor)] focus:border-transparent"
-                placeholder="Indícanos cualquier necesidad especial..."
-              ></textarea>
-            </div>
-            
-            <button 
-              type="submit" 
-              id="submitBtn"
-              disabled
-              class="w-full bg-[var(--primaryColor)] text-white py-3 px-6 rounded-md hover:bg-[var(--secondaryColor)] transition-colors duration-300 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Confirmar reserva
-            </button>
-          </form>
-        </div>
-      </div>
-      
-      <!-- Información adicional -->
-      <div class="mt-12 text-center">
-        <h3 class="text-xl font-bold mb-4">Información adicional</h3>
-        <ul class="space-y-2 text-gray-600 max-w-2xl mx-auto">
-          <li>• Tu reserva será confirmada por teléfono o email dentro de las próximas 24 horas.</li>
-          <li>• La disponibilidad se actualiza en tiempo real.</li>
-          <li>• Las reservas están sujetas a disponibilidad.</li>
-          <li>• Para grupos grandes (más de 8 personas), por favor contacta directamente al restaurante.</li>
-        </ul>
-        
-        <!-- Horarios -->
-        <div class="mt-8">
-          <h3 class="text-xl font-bold mb-4">Nuestros horarios</h3>
-          <div class="flex flex-col md:flex-row justify-center gap-4 md:gap-8">
-            {openingHours.length > 0 ? (
-              openingHours.map((day) => (
-                <div class="flex flex-col items-center">
-                  <span class="font-medium">{day.day_of_week}</span>
-                  <span class="text-gray-600">{day.is_closed ? 'Cerrado' : `${day.open_time} - ${day.close_time}`}</span>
-                </div>
-              ))
-            ) : (
-              <>
-                <div class="flex flex-col items-center">
-                  <span class="font-medium">Lun - Vie</span>
-                  <span class="text-gray-600">11:00 - 22:00</span>
-                </div>
-                <div class="flex flex-col items-center">
-                  <span class="font-medium">Sábados</span>
-                  <span class="text-gray-600">10:00 - 23:00</span>
-                </div>
-                <div class="flex flex-col items-center">
-                  <span class="font-medium">Domingos</span>
-                  <span class="text-gray-600">10:00 - 21:00</span>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-</DefaultLayout>
-
 <script>
   // Sistema de disponibilidad en tiempo real
   let availabilityData = null;
   let selectedHour = null;
+  let currentFecha = null;
   
+  // Formulario de reservación
   document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('reservationForm');
     const submitBtn = document.getElementById('submitBtn');
@@ -210,22 +16,23 @@ const openingHours = await getOpeningHours();
     const hourlyAvailability = document.getElementById('hourlyAvailability');
     
     // Función para verificar disponibilidad
-    async function checkAvailability(fecha) {
+    async function checkAvailability(fecha, showLoading = true) {
       if (!fecha) return;
       
-      // Mostrar indicador de carga
-      availabilityIndicator.classList.remove('hidden');
-      availabilitySummary.classList.add('hidden');
-      horaSelect.disabled = true;
-      personasSelect.disabled = true;
-      submitBtn.disabled = true;
+      currentFecha = fecha;
+      
+      // Mostrar indicador de carga solo si se solicita
+      if (showLoading) {
+        availabilityIndicator.classList.remove('hidden');
+        availabilitySummary.classList.add('hidden');
+      }
       
       try {
         const response = await fetch(`/api/availability?fecha=${fecha}&personas=1`);
         if (!response.ok) throw new Error('Error al verificar disponibilidad');
         
         availabilityData = await response.json();
-        console.log('Disponibilidad:', availabilityData);
+        console.log('Disponibilidad actualizada:', availabilityData);
         
         // Actualizar selector de hora
         updateHourSelector();
@@ -235,59 +42,112 @@ const openingHours = await getOpeningHours();
         
       } catch (error) {
         console.error('Error:', error);
-        alert('Error al verificar la disponibilidad. Por favor, intenta de nuevo.');
+        if (showLoading) {
+          alert('Error al verificar la disponibilidad. Por favor, intenta de nuevo.');
+        }
       } finally {
-        availabilityIndicator.classList.add('hidden');
+        if (showLoading) {
+          availabilityIndicator.classList.add('hidden');
+        }
       }
     }
     
     // Actualizar selector de hora con disponibilidad
     function updateHourSelector() {
+      // Guardar el valor actual si existe
+      const currentValue = horaSelect.value;
+      
+      // Limpiar y regenerar opciones
       horaSelect.innerHTML = '<option value="">Selecciona una hora</option>';
-      horaSelect.disabled = false;
+      
+      // Agregar horarios de mañana
+      const horariosMañana = ['08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00'];
+      const horariosNoche = ['19:00', '19:30', '20:00', '20:30', '21:00', '21:30'];
+      
+      // Agrupar por mañana y noche
+      const optgroupMañana = document.createElement('optgroup');
+      optgroupMañana.label = 'Mañana / Tarde';
+      
+      const optgroupNoche = document.createElement('optgroup');
+      optgroupNoche.label = 'Noche';
       
       let hasAvailableHours = false;
       
-      Object.entries(availabilityData.horarios).forEach(([hora, info]) => {
-        const option = document.createElement('option');
-        option.value = hora;
-        
-        if (info.espaciosDisponibles === 0) {
-          option.disabled = true;
-          option.textContent = `${hora} - COMPLETO`;
-          option.classList.add('text-red-500');
-        } else if (info.espaciosDisponibles <= 5) {
-          option.textContent = `${hora} - Solo ${info.espaciosDisponibles} lugares`;
-          option.classList.add('text-orange-500');
-          hasAvailableHours = true;
-        } else {
-          option.textContent = `${hora} - ${info.espaciosDisponibles} lugares disponibles`;
-          option.classList.add('text-green-600');
-          hasAvailableHours = true;
+      horariosMañana.forEach(hora => {
+        const info = availabilityData.horarios[hora];
+        if (info) {
+          const option = createHourOption(hora, info);
+          if (!option.disabled) hasAvailableHours = true;
+          optgroupMañana.appendChild(option);
         }
-        
-        horaSelect.appendChild(option);
       });
       
-      if (!hasAvailableHours) {
-        horaSelect.innerHTML = '<option value="">No hay horarios disponibles para esta fecha</option>';
-        horaSelect.disabled = true;
+      horariosNoche.forEach(hora => {
+        const info = availabilityData.horarios[hora];
+        if (info) {
+          const option = createHourOption(hora, info);
+          if (!option.disabled) hasAvailableHours = true;
+          optgroupNoche.appendChild(option);
+        }
+      });
+      
+      horaSelect.appendChild(optgroupMañana);
+      horaSelect.appendChild(optgroupNoche);
+      
+      // Restaurar el valor si todavía es válido
+      if (currentValue && availabilityData.horarios[currentValue]?.espaciosDisponibles > 0) {
+        horaSelect.value = currentValue;
+        updatePersonasSelector(currentValue);
+      } else {
+        // Reset personas si la hora ya no es válida
+        personasSelect.innerHTML = '<option value="">Primero selecciona una hora</option>';
+        personasSelect.disabled = true;
       }
       
       // Actualizar info
-      document.getElementById('horaInfo').textContent = hasAvailableHours ? '(selecciona para ver disponibilidad)' : '';
+      document.getElementById('horaInfo').textContent = hasAvailableHours ? '(ver disponibilidad)' : '';
+    }
+    
+    function createHourOption(hora, info) {
+      const option = document.createElement('option');
+      option.value = hora;
+      
+      if (info.estado === 'pasado') {
+        option.disabled = true;
+        option.textContent = `${hora} - Ya pasó`;
+        option.style.color = '#9ca3af';
+      } else if (info.espaciosDisponibles === 0) {
+        option.disabled = true;
+        option.textContent = `${hora} - COMPLETO`;
+        option.style.color = '#ef4444';
+      } else if (info.espaciosDisponibles <= 5) {
+        option.textContent = `${hora} - ¡Solo ${info.espaciosDisponibles} lugares!`;
+        option.style.color = '#f97316';
+      } else {
+        option.textContent = `${hora} - ${info.espaciosDisponibles} lugares disponibles`;
+        option.style.color = '#16a34a';
+      }
+      
+      return option;
     }
     
     // Mostrar resumen de disponibilidad
+        // Mostrar resumen de disponibilidad
     function showAvailabilitySummary() {
       hourlyAvailability.innerHTML = '';
       availabilitySummary.classList.remove('hidden');
       
-      Object.entries(availabilityData.horarios).forEach(([hora, info]) => {
+      const horasOrdenadas = Object.keys(availabilityData.horarios).sort();
+      
+      horasOrdenadas.forEach(hora => {
+        const info = availabilityData.horarios[hora];
         const div = document.createElement('div');
         div.className = 'p-2 rounded text-center ';
         
-        if (info.espaciosDisponibles === 0) {
+        if (info.estado === 'pasado') {
+          div.className += 'bg-gray-100 text-gray-500';
+          div.innerHTML = `<div class="font-medium">${hora}</div><div class="text-xs">Pasado</div>`;
+        } else if (info.espaciosDisponibles === 0) {
           div.className += 'bg-red-100 text-red-700';
           div.innerHTML = `<div class="font-medium">${hora}</div><div class="text-xs">Completo</div>`;
         } else if (info.espaciosDisponibles <= 5) {
@@ -303,7 +163,7 @@ const openingHours = await getOpeningHours();
       
       // Actualizar clase del contenedor según disponibilidad general
       if (availabilityData.resumen.horariosDisponibles === 0) {
-                availabilitySummary.className = 'p-4 rounded-lg bg-red-50 border border-red-200';
+        availabilitySummary.className = 'p-4 rounded-lg bg-red-50 border border-red-200';
       } else if (availabilityData.resumen.horariosDisponibles <= 3) {
         availabilitySummary.className = 'p-4 rounded-lg bg-orange-50 border border-orange-200';
       } else {
@@ -328,6 +188,9 @@ const openingHours = await getOpeningHours();
         return;
       }
       
+      // Guardar valor actual
+      const currentValue = personasSelect.value;
+      
       personasSelect.innerHTML = '<option value="">Selecciona número de personas</option>';
       personasSelect.disabled = false;
       
@@ -338,6 +201,12 @@ const openingHours = await getOpeningHours();
         option.value = i;
         option.textContent = i === 1 ? '1 persona' : `${i} personas`;
         personasSelect.appendChild(option);
+      }
+      
+      // Restaurar valor si es válido
+      if (currentValue && parseInt(currentValue) <= maxPersonas) {
+        personasSelect.value = currentValue;
+        submitBtn.disabled = false;
       }
       
       // Actualizar info
@@ -354,18 +223,22 @@ const openingHours = await getOpeningHours();
         checkAvailability(fecha);
       } else {
         // Reset si no hay fecha
-        horaSelect.innerHTML = '<option value="">Primero selecciona una fecha</option>';
-        horaSelect.disabled = true;
-        personasSelect.innerHTML = '<option value="">Primero selecciona fecha y hora</option>';
-        personasSelect.disabled = true;
+        horaSelect.innerHTML = '<option value="">Selecciona una hora</option>';
+        horaSelect.disabled = false;
+        personasSelect.innerHTML = '<option value="">Selecciona</option>';
+        personasSelect.disabled = false;
         submitBtn.disabled = true;
         availabilitySummary.classList.add('hidden');
+        document.getElementById('horaInfo').textContent = '';
+        document.getElementById('personasInfo').textContent = '';
       }
     });
     
     // Event listener para cambio de hora
     horaSelect.addEventListener('change', (e) => {
-      updatePersonasSelector(e.target.value);
+      if (availabilityData && e.target.value) {
+        updatePersonasSelector(e.target.value);
+      }
     });
     
     // Event listener para cambio de personas
@@ -377,7 +250,37 @@ const openingHours = await getOpeningHours();
       }
     });
     
-    // Manejo del envío del formulario
+    // Actualización automática de disponibilidad cada 30 segundos
+    let updateInterval;
+    function startAutoUpdate() {
+      if (updateInterval) clearInterval(updateInterval);
+      
+      updateInterval = setInterval(() => {
+        if (currentFecha && !availabilityIndicator.classList.contains('hidden')) {
+          return; // No actualizar si ya está cargando
+        }
+        
+        if (currentFecha) {
+          console.log('Actualizando disponibilidad automáticamente...');
+          checkAvailability(currentFecha, false); // false = no mostrar indicador de carga
+        }
+      }, 30000); // 30 segundos
+    }
+    
+    // Iniciar actualización automática cuando se selecciona una fecha
+    fechaInput.addEventListener('change', () => {
+      if (fechaInput.value) {
+        startAutoUpdate();
+      } else {
+        if (updateInterval) clearInterval(updateInterval);
+      }
+    });
+    
+    // Limpiar intervalo al salir de la página
+    window.addEventListener('beforeunload', () => {
+      if (updateInterval) clearInterval(updateInterval);
+    });
+    
     if (form) {
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -401,6 +304,7 @@ const openingHours = await getOpeningHours();
         console.log('Enviando datos de reserva:', reservationData);
         
         try {
+          // Usar la API route de Astro en lugar de llamar directamente a Directus
           const response = await fetch('/api/reservations', {
             method: 'POST',
             headers: {
@@ -414,20 +318,22 @@ const openingHours = await getOpeningHours();
           if (response.ok) {
             const result = await response.json();
             console.log('Reserva creada:', result);
-            
-            // Mostrar mensaje de éxito
             alert('¡Reserva recibida con éxito! Te contactaremos para confirmar tu reserva.');
             
-            // Resetear formulario
+            // Limpiar intervalo de actualización
+            if (updateInterval) clearInterval(updateInterval);
+            
+            // Reset formulario
             form.reset();
-            horaSelect.innerHTML = '<option value="">Primero selecciona una fecha</option>';
-            horaSelect.disabled = true;
-            personasSelect.innerHTML = '<option value="">Primero selecciona fecha y hora</option>';
-            personasSelect.disabled = true;
+            horaSelect.innerHTML = '<option value="">Selecciona una hora</option>';
+            personasSelect.innerHTML = '<option value="">Selecciona</option>';
             submitBtn.disabled = true;
             availabilitySummary.classList.add('hidden');
             availabilityData = null;
             selectedHour = null;
+            currentFecha = null;
+            document.getElementById('horaInfo').textContent = '';
+            document.getElementById('personasInfo').textContent = '';
             
           } else {
             const errorData = await response.json();
@@ -435,11 +341,17 @@ const openingHours = await getOpeningHours();
             
             if (response.status === 409) {
               // Capacidad insuficiente - actualizar disponibilidad
-              alert(`Lo sentimos, la capacidad ha cambiado. Solo quedan ${errorData.disponibles} lugares disponibles para este horario.`);
-              // Recargar disponibilidad
-              checkAvailability(formData.get('fecha'));
+              alert(`Lo sentimos, la capacidad ha cambiado. Solo quedan ${errorData.disponibles} lugares disponibles para este horario. Actualizando disponibilidad...`);
+              // Recargar disponibilidad inmediatamente
+              await checkAvailability(formData.get('fecha'));
+              // Actualizar el selector de personas con la nueva disponibilidad
+              if (selectedHour) {
+                updatePersonasSelector(selectedHour);
+              }
             } else {
-              alert('Error al procesar la reserva. Por favor, intenta de nuevo.');
+              alert('El horario seleccionado ya alcanzó el límite de su capacidad.');
+              // Actualizar disponibilidad para reflejar cambios
+              await checkAvailability(formData.get('fecha'));
             }
           }
         } catch (error) {
@@ -454,36 +366,3 @@ const openingHours = await getOpeningHours();
     }
   });
 </script>
-
-<style>
-  /* Estilos para las opciones del select */
-  option:disabled {
-    color: #9ca3af;
-  }
-  
-  option.text-red-500 {
-    color: #ef4444;
-  }
-  
-  option.text-orange-500 {
-    color: #f97316;
-  }
-  
-  option.text-green-600 {
-    color: #16a34a;
-  }
-  
-  /* Animación para el indicador de carga */
-  @keyframes pulse {
-    0%, 100% {
-      opacity: 1;
-    }
-    50% {
-      opacity: 0.5;
-    }
-  }
-  
-  #availabilityIndicator {
-    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-  }
-</style> 
