@@ -174,6 +174,14 @@ import DefaultLayout from '../layouts/DefaultLayout.astro';
       }
     });
     
+    // Función para obtener fecha local en formato YYYY-MM-DD
+    function getFechaLocal(date) {
+      const year = date.getFullYear();
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const day = date.getDate().toString().padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+    
     // Verificar disponibilidad al cambiar fecha
     async function checkAvailability() {
       const fecha = fechaInput.value;
@@ -189,16 +197,22 @@ import DefaultLayout from '../layouts/DefaultLayout.astro';
         return;
       }
       
-      // Obtener hora actual del navegador
+      // Obtener hora y fecha actual del navegador
       const now = new Date();
       const horaCliente = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+      const fechaCliente = getFechaLocal(now);
+      
+      console.log('Fecha actual del cliente:', fechaCliente);
+      console.log('Fecha seleccionada:', fecha);
       
       try {
-        const response = await fetch(`/api/availability?fecha=${fecha}&horaCliente=${horaCliente}`);
+        const response = await fetch(`/api/availability?fecha=${fecha}&horaCliente=${horaCliente}&fechaCliente=${fechaCliente}`);
         if (!response.ok) return;
         
         const data = await response.json();
         const horarios = data.horarios;
+        
+        console.log('Debug info:', data.debug);
         
         // Actualizar opciones del select de hora
         Array.from(horaSelect.options).forEach(option => {
