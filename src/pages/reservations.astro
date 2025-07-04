@@ -1,6 +1,9 @@
 ---
 // src/pages/reservations.astro
 import DefaultLayout from '../layouts/DefaultLayout.astro';
+import { getOpeningHours } from '../lib/directus';
+
+const openingHours = await getOpeningHours();
 ---
 
 <DefaultLayout title="Reservaciones - Restaurante">
@@ -99,9 +102,8 @@ import DefaultLayout from '../layouts/DefaultLayout.astro';
                   <option value="20:00">20:00</option>
                   <option value="20:30">20:30</option>
                   <option value="21:00">21:00</option>
-                  <option value="22:00">22:00</option>
+                  <option value="21:30">21:30</option>
                 </select>
-                <div id="availability-info" class="mt-2 text-sm text-gray-600"></div>
               </div>
               
               <div>
@@ -156,6 +158,36 @@ import DefaultLayout from '../layouts/DefaultLayout.astro';
           <li>• Las reservas están sujetas a disponibilidad.</li>
           <li>• Para grupos grandes (más de 8 personas), por favor contacta directamente al restaurante.</li>
         </ul>
+        
+        <!-- Horarios -->
+        <div class="mt-8">
+          <h3 class="text-xl font-bold mb-4">Nuestros horarios</h3>
+          <div class="flex flex-col md:flex-row justify-center gap-4 md:gap-8">
+            {openingHours.length > 0 ? (
+              openingHours.map((day) => (
+                <div class="flex flex-col items-center">
+                  <span class="font-medium">{day.day_of_week}</span>
+                  <span class="text-gray-600">{day.is_closed ? 'Cerrado' : `${day.open_time} - ${day.close_time}`}</span>
+                </div>
+              ))
+            ) : (
+              <>
+                <div class="flex flex-col items-center">
+                  <span class="font-medium">Lun - Vie</span>
+                  <span class="text-gray-600">11:00 - 22:00</span>
+                </div>
+                <div class="flex flex-col items-center">
+                  <span class="font-medium">Sábados</span>
+                  <span class="text-gray-600">10:00 - 23:00</span>
+                </div>
+                <div class="flex flex-col items-center">
+                  <span class="font-medium">Domingos</span>
+                  <span class="text-gray-600">10:00 - 21:00</span>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -166,195 +198,10 @@ import DefaultLayout from '../layouts/DefaultLayout.astro';
   document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('reservationForm');
     const submitBtn = document.getElementById('submitBtn');
-    const fechaInput = document.getElementById('fecha');
-    const horaSelect = document.getElementById('hora');
-    const availabilityInfo = document.getElementById('availability-info');
-    
-    // Función para obtener la disponibilidad
-    async function checkAvailability(fecha, hora, personas = 1) {
-      if (!fecha || !hora) return;
-      
-      try {
-        const response = await fetch(`/api/availability?fecha=${fecha}&personas=${personas}`);
-        if (response.ok) {
-          const data = await response.json();
-          const horarios = data.horarios;
-          
-          if (horarios && horarios[hora]) {
-            const disponibilidad = horarios[hora];
-            const espaciosDisponibles = disponibilidad.espaciosDisponibles;
-            const disponibleParaGrupo = disponibilidad.disponibleParaGrupo;
-            
-            if (espaciosDisponibles <= 0) {
-              availabilityInfo.innerHTML = `<span class="text-red-600">• Horario lleno</span>`;
-            } else if (!disponibleParaGrupo) {
-              availabilityInfo.innerHTML = `<span class="text-orange-600">• Solo ${espaciosDisponibles} lugares disponibles (insuficiente para ${personas} personas)</span>`;
-            } else {
-              availabilityInfo.innerHTML = `<span class="text-green-600">• ${espaciosDisponibles} lugares disponibles</span>`;
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error al verificar disponibilidad:', error);
-      }
-    }
-    
-    // Función para filtrar horas pasadas
-    function filterPastHours() {
-      const selectedDate = fechaInput.value;
-      const today = new Date();
-      const currentHour = today.getHours();
-      const currentMinute = today.getMinutes();
-      const currentTime = currentHour * 60 + currentMinute;
-      
-      const isToday = selectedDate === today.toISOString().split('T')[0];
-      
-      Array.from(horaSelect.options).forEach(option => {
-        if (option.value === '') return;
-        
-        const [hour, minute] = option.value.split(':').map(Number);
-        const optionTime = hour * 60 + minute;
-        
-        // Solo deshabilitar si es hoy Y la hora ya pasó (con 30 minutos de buffer)
-        if (isToday && optionTime <= (currentTime + 30)) {
-          option.disabled = true;
-          option.style.color = '#999';
-          // Marcar como hora pasada en el texto
-          if (!option.textContent.includes('(hora pasada)')) {
-            const baseText = option.textContent.split(' - ')[0];
-            option.textContent = `${baseText} - (hora pasada)`;
-          }
-        } else {
-          // Solo rehabilitar si no está deshabilitada por falta de disponibilidad
-          if (!option.textContent.includes('Lleno') && !option.textContent.includes('Insuficiente')) {
-            option.disabled = false;
-            option.style.color = '';
-          }
-        }
-      });
-    }
-    
-    // Función para actualizar todas las horas con disponibilidad
-    async function updateHoursAvailability() {
-      const selectedDate = fechaInput.value;
-      const selectedPersonas = document.getElementById('personas').value || 1;
-      
-      if (!selectedDate) return;
-      
-      try {
-        const response = await fetch(`/api/availability?fecha=${selectedDate}&personas=${selectedPersonas}`);
-        if (response.ok) {
-          const data = await response.json();
-          const horarios = data.horarios;
-          
-          console.log('Datos de disponibilidad recibidos:', data); // Debug
-          
-          // Actualizar cada opción de hora
-          Array.from(horaSelect.options).forEach(option => {
-            if (option.value === '') return;
-            
-            const hora = option.value;
-            const disponibilidad = horarios[hora];
-            
-            if (disponibilidad) {
-              const { espaciosDisponibles, disponibleParaGrupo, estado, personasReservadas, capacidadMaxima } = disponibilidad;
-              
-              console.log(`Hora ${hora}:`, disponibilidad); // Debug
-              
-              // Restablecer texto base
-              const baseText = hora;
-              
-              if (estado === 'lleno') {
-                option.textContent = `${baseText} - Lleno (${personasReservadas}/${capacidadMaxima})`;
-                option.style.color = '#dc2626';
-                option.disabled = true;
-              } else if (estado === 'insuficiente') {
-                option.textContent = `${baseText} - Insuficiente (${espaciosDisponibles} disponibles)`;
-                option.style.color = '#f59e0b';
-                option.disabled = true;
-              } else {
-                option.textContent = `${baseText} - ${espaciosDisponibles} lugares disponibles`;
-                option.style.color = '#059669';
-                option.disabled = false;
-              }
-            } else {
-              // Si no hay datos para esta hora, probablemente no está en la configuración
-              option.textContent = `${option.value} - No disponible`;
-              option.style.color = '#6b7280';
-              option.disabled = true;
-            }
-          });
-          
-          // Aplicar filtro de horas pasadas después de actualizar disponibilidad
-          filterPastHours();
-        }
-      } catch (error) {
-        console.error('Error al actualizar disponibilidad:', error);
-      }
-    }
-    
-    // Event listeners
-    fechaInput.addEventListener('change', () => {
-      filterPastHours();
-      updateHoursAvailability();
-      availabilityInfo.innerHTML = '';
-    });
-    
-    horaSelect.addEventListener('change', () => {
-      const selectedDate = fechaInput.value;
-      const selectedHour = horaSelect.value;
-      const selectedPersonas = document.getElementById('personas').value || 1;
-      checkAvailability(selectedDate, selectedHour, selectedPersonas);
-    });
-    
-    // Actualizar disponibilidad cuando cambie el número de personas
-    document.getElementById('personas').addEventListener('change', () => {
-      const selectedDate = fechaInput.value;
-      const selectedHour = horaSelect.value;
-      const selectedPersonas = document.getElementById('personas').value || 1;
-      
-      if (selectedDate) {
-        updateHoursAvailability();
-      }
-      
-      if (selectedHour) {
-        checkAvailability(selectedDate, selectedHour, selectedPersonas);
-      }
-    });
-    
-    // Filtrar horas al cargar la página
-    filterPastHours();
     
     if (form) {
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        
-        // Verificar disponibilidad antes de enviar
-        const fecha = document.getElementById('fecha').value;
-        const hora = document.getElementById('hora').value;
-        const personas = parseInt(document.getElementById('personas').value) || 1;
-        
-        try {
-          const availabilityResponse = await fetch(`/api/availability?fecha=${fecha}&personas=${personas}`);
-          if (availabilityResponse.ok) {
-            const availabilityData = await availabilityResponse.json();
-            const horarios = availabilityData.horarios;
-            
-            if (horarios && horarios[hora]) {
-              const disponibilidad = horarios[hora];
-              if (!disponibilidad.disponibleParaGrupo) {
-                if (disponibilidad.espaciosDisponibles <= 0) {
-                  alert('Lo sentimos, este horario ya está lleno.');
-                } else {
-                  alert(`Lo sentimos, solo hay ${disponibilidad.espaciosDisponibles} lugares disponibles para este horario y necesitas ${personas}.`);
-                }
-                return;
-              }
-            }
-          }
-        } catch (error) {
-          console.error('Error al verificar disponibilidad:', error);
-        }
         
         // Deshabilitar el botón durante el envío
         submitBtn.disabled = true;
@@ -375,6 +222,7 @@ import DefaultLayout from '../layouts/DefaultLayout.astro';
         console.log('Enviando datos de reserva:', reservationData);
         
         try {
+          // Usar la API route de Astro en lugar de llamar directamente a Directus
           const response = await fetch('/api/reservations', {
             method: 'POST',
             headers: {
@@ -390,11 +238,10 @@ import DefaultLayout from '../layouts/DefaultLayout.astro';
             console.log('Reserva creada:', result);
             alert('¡Reserva recibida con éxito! Te contactaremos para confirmar tu reserva.');
             form.reset();
-            availabilityInfo.innerHTML = '';
           } else {
             const errorData = await response.json();
             console.error('Error al enviar reserva:', errorData);
-            alert('El horario seleccionado ya alcanzó el límite de su capacidad.');
+            alert('El horario seleccionado ya alcanzo el limite de su capacidad.');
           }
         } catch (error) {
           console.error('Error de red:', error);
