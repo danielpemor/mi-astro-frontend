@@ -145,9 +145,6 @@ import DefaultLayout from '../layouts/DefaultLayout.astro';
         </div>
       </div>
       
-      <!-- Debug info -->
-      <div id="debugInfo" class="mt-4 text-center text-sm text-gray-500"></div>
-      
       <!-- Información adicional -->
       <div class="mt-12 text-center">
         <h3 class="text-xl font-bold mb-4">Información adicional</h3>
@@ -178,12 +175,7 @@ import DefaultLayout from '../layouts/DefaultLayout.astro';
     
     fechaInput.setAttribute('min', todayStr);
     
-    // Mostrar info de debug
-    debugInfo.innerHTML = `
-      <p>Hora actual de tu navegador: ${today.toLocaleString()}</p>
-      <p>Fecha mínima permitida: ${todayStr}</p>
-      <p>Zona horaria: ${Intl.DateTimeFormat().resolvedOptions().timeZone}</p>
-    `;
+
     
     // Guardar los textos originales de las opciones
     const opcionesOriginales = {};
