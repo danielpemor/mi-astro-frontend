@@ -230,7 +230,10 @@ import DefaultLayout from '../layouts/DefaultLayout.astro';
       
       try {
         const response = await fetch(`/api/availability?fecha=${fecha}&horaCliente=${horaCliente}&fechaCliente=${fechaCliente}`);
-        if (!response.ok) return;
+        if (!response.ok) {
+          console.error('Error en respuesta:', response.status);
+          return;
+        }
         
         const data = await response.json();
         const horarios = data.horarios;
@@ -239,37 +242,111 @@ import DefaultLayout from '../layouts/DefaultLayout.astro';
         
         // Actualizar opciones del select de hora
         let algunaDisponible = false;
+        let selectedValue = horaSelect.value; // Guardar valor actual
+        
         Array.from(horaSelect.options).forEach(option => {
           if (option.value) {
             const horaInfo = horarios[option.value];
-            if (!horaInfo) return;
-            
-            if (horaInfo.pasado || horaInfo.completo) {
+            if (!horaInfo) {
+              // Si no hay info de esta hora, deshabilitarla por seguridad
               option.disabled = true;
-              option.textContent = opcionesOriginales[option.value];
+              option.textContent = `${opcionesOriginales[option.value]} - No disponible`;
               option.classList.add('text-gray-400');
-            } else {
+              return;
+            }
+            
+            // Verificar si está disponible
+            if (horaInfo.disponible) {
+              // Hora disponible
               option.disabled = false;
               option.textContent = opcionesOriginales[option.value];
               option.classList.remove('text-gray-400');
               algunaDisponible = true;
+            } else {
+              // Hora no disponible (completo o pasado)
+              option.disabled = true;
+              let razon = '';
+              if (horaInfo.pasado) {
+                razon = ' - Hora pasada';
+              } else if (horaInfo.completo) {
+                razon = ' - Completo';
+              } else {
+                razon = ' - No disponible';
+              }
+              option.textContent = `${opcionesOriginales[option.value]}${razon}`;
+              option.classList.add('text-gray-400');
+              
+              // Si la hora seleccionada ya no está disponible, limpiar selección
+              if (selectedValue === option.value) {
+                horaSelect.value = '';
+              }
             }
           }
         });
         
+        // Mostrar mensaje si no hay horas disponibles
+        if (!algunaDisponible) {
+          // Agregar opción temporal para mostrar mensaje
+          const mensajeOption = document.createElement('option');
+          mensajeOption.value = '';
+          mensajeOption.textContent = 'No hay horarios disponibles para esta fecha';
+          mensajeOption.disabled = true;
+          mensajeOption.selected = true;
+          
+          // Limpiar select y agregar mensaje
+          horaSelect.innerHTML = '<option value="">Selecciona una hora</option>';
+          horaSelect.appendChild(mensajeOption);
+          
+          // Restaurar opciones después de un momento
+          setTimeout(() => {
+            location.reload(); // Recargar para restaurar opciones originales
+          }, 3000);
+        }
+        
         console.log('¿Hay alguna hora disponible?:', algunaDisponible);
+        
       } catch (error) {
         console.error('Error verificando disponibilidad:', error);
+        // En caso de error, mostrar mensaje
+        Array.from(horaSelect.options).forEach(option => {
+          if (option.value) {
+            option.disabled = true;
+            option.textContent = `${opcionesOriginales[option.value]} - Error al verificar`;
+            option.classList.add('text-gray-400');
+          }
+        });
       }
     }
     
     // Verificar disponibilidad cuando cambie la fecha
     fechaInput.addEventListener('change', checkAvailability);
     
+    // También verificar cada 30 segundos si hay una fecha seleccionada
+    setInterval(() => {
+      if (fechaInput.value) {
+        checkAvailability();
+      }
+    }, 30000);
+    
     // Envío del formulario
     if (form) {
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
+        
+        // Verificar que se haya seleccionado una hora válida
+        const horaSeleccionada = horaSelect.value;
+        if (!horaSeleccionada) {
+          alert('Por favor selecciona un horario disponible.');
+          return;
+        }
+        
+        // Verificar que la hora seleccionada no esté deshabilitada
+        const optionSeleccionada = horaSelect.querySelector(`option[value="${horaSeleccionada}"]`);
+        if (optionSeleccionada && optionSeleccionada.disabled) {
+          alert('El horario seleccionado ya no está disponible. Por favor selecciona otro.');
+          await checkAvailability(); // Actualizar disponibilidad
+          return;
+        }
         
         submitBtn.disabled = true;
         submitBtn.textContent = 'Enviando...';
@@ -281,7 +358,7 @@ import DefaultLayout from '../layouts/DefaultLayout.astro';
           email: formData.get('email'),
           fecha: formData.get('fecha'),
           hora: formData.get('hora'),
-          personas: formData.get('personas'),
+          personas: parseInt(formData.get('personas')),
           comentarios: formData.get('comentarios') || null
         };
         
@@ -314,7 +391,7 @@ import DefaultLayout from '../layouts/DefaultLayout.astro';
               alert('El horario seleccionado no está disponible. Por favor, intenta con otro horario.');
             }
             
-            // Actualizar disponibilidad
+            // Actualizar disponibilidad después del error
             await checkAvailability();
           }
         } catch (error) {
