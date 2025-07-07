@@ -21,7 +21,6 @@ async function obtenerConfiguracionCapacidad(fecha) {
   const diaSemana = fechaLocal.getDay().toString();
 
   try {
-    // Primero buscar configuración específica por fecha
     const urlFecha = `${DIRECTUS_URL}/items/configuracion_capacidad?filter[fecha_especifica][_eq]=${fecha}&filter[activo][_eq]=true&fields=capacidad_por_horario&limit=1`;
     const respFecha = await fetch(urlFecha, { headers: getHeaders() });
     if (respFecha.ok) {
@@ -31,7 +30,6 @@ async function obtenerConfiguracionCapacidad(fecha) {
       }
     }
 
-    // Luego buscar por día de semana
     const urlDia = `${DIRECTUS_URL}/items/configuracion_capacidad?filter[dia_semana][_eq]=${diaSemana}&filter[activo][_eq]=true&filter[fecha_especifica][_null]=true&fields=capacidad_por_horario&limit=1`;
     const respDia = await fetch(urlDia, { headers: getHeaders() });
     if (respDia.ok) {
@@ -45,61 +43,6 @@ async function obtenerConfiguracionCapacidad(fecha) {
   }
 
   return CAPACIDAD_DEFAULT;
-}
-
-async function obtenerReservasDelDia(fecha) {
-  try {
-    const checkUrl = `${DIRECTUS_URL}/items/reservas?filter[fecha][_eq]=${fecha}&filter[estado][_neq]=cancelada&fields=hora,personas&limit=-1`;
-    const response = await fetch(checkUrl, { headers: getHeaders() });
-
-    if (!response.ok) {
-      console.error(`Error al consultar reservas: ${response.status}`);
-      return {};
-    }
-
-    const reservasData = await response.json();
-    const reservas = reservasData.data || [];
-
-    // Contar personas por hora
-    const reservasPorHora = {};
-    reservas.forEach(reserva => {
-      if (reserva.hora) {
-        const personas = parseInt(reserva.personas) || 1;
-        reservasPorHora[reserva.hora] = (reservasPorHora[reserva.hora] || 0) + personas;
-      }
-    });
-
-    return reservasPorHora;
-  } catch (error) {
-    console.error('Error obteniendo reservas:', error);
-    return {};
-  }
-}
-
-function esHoraPasada(hora, horaClienteStr, fechaClienteStr, fechaSeleccionada) {
-  // Solo verificar si es hoy
-  if (fechaSeleccionada !== fechaClienteStr) {
-    return false;
-  }
-
-  if (!horaClienteStr) {
-    return false;
-  }
-
-  try {
-    const [horaActual, minActual] = horaClienteStr.split(':').map(Number);
-    const [horaSlot, minSlot] = hora.split(':').map(Number);
-    
-    // Convertir a minutos para comparar más fácil
-    const minutosActuales = horaActual * 60 + minActual;
-    const minutosSlot = horaSlot * 60 + minSlot;
-    
-    // Agregar 15 minutos de margen para que no se pueda reservar muy cerca
-    return minutosSlot <= (minutosActuales + 0);
-  } catch (error) {
-    console.error('Error comparando horas:', error);
-    return false;
-  }
 }
 
 export async function GET({ url }) {
@@ -116,59 +59,74 @@ export async function GET({ url }) {
       });
     }
 
-    console.log('=== Availability Check ===');
-    console.log('Fecha:', fecha);
-    console.log('Hora cliente:', horaClienteStr);
-    console.log('Fecha cliente:', fechaClienteStr);
-
-    // Obtener configuración de capacidad
+    // Obtener capacidad desde Directus
     const capacidadConfig = await obtenerConfiguracionCapacidad(fecha);
-    console.log('Capacidad config:', capacidadConfig);
 
-    // Obtener reservas del día
-    const reservasPorHora = await obtenerReservasDelDia(fecha);
-    console.log('Reservas por hora:', reservasPorHora);
+    // Obtener reservas
+    const checkUrl = `${DIRECTUS_URL}/items/reservas?filter[fecha][_eq]=${fecha}&filter[estado][_neq]=cancelada&limit=-1`;
+    const response = await fetch(checkUrl, { headers: getHeaders() });
 
-    // Calcular disponibilidad para cada horario
-    const horarios = {};
-    
-    Object.entries(capacidadConfig).forEach(([hora, capacidadMaxima]) => {
-      const personasReservadas = reservasPorHora[hora] || 0;
-      const espaciosDisponibles = capacidadMaxima - personasReservadas;
-      const estaCompleto = espaciosDisponibles <= 0;
-      const yaPaso = esHoraPasada(hora, horaClienteStr, fechaClienteStr, fecha);
-      
-      horarios[hora] = {
-        disponible: !estaCompleto && !yaPaso,
-        completo: estaCompleto,
-        pasado: yaPaso,
-        capacidadMaxima,
-        personasReservadas,
-        espaciosDisponibles: Math.max(0, espaciosDisponibles)
-      };
-      
-      console.log(`${hora}: disponible=${!estaCompleto && !yaPaso}, completo=${estaCompleto}, pasado=${yaPaso}, espacios=${espaciosDisponibles}`);
+    if (!response.ok) {
+      throw new Error(`Error al consultar reservas: ${response.status}`);
+    }
+
+    const reservasData = await response.json();
+    const reservas = reservasData.data || [];
+
+    // Contar reservas por hora
+    const reservasPorHora = {};
+    reservas.forEach(reserva => {
+      if (reserva.hora) {
+        reservasPorHora[reserva.hora] = (reservasPorHora[reserva.hora] || 0) + parseInt(reserva.personas || 1);
+      }
     });
 
-    return new Response(JSON.stringify({ 
-      horarios,
-      debug: {
-        fecha,
-        fechaCliente: fechaClienteStr,
-        horaCliente: horaClienteStr,
-        esHoy: fecha === fechaClienteStr
+    // Verificar si es hoy
+    const esHoy = fecha === fechaClienteStr;
+    
+    // Calcular disponibilidad
+    const horarios = {};
+    
+    Object.entries(capacidadConfig).forEach(([hora, capacidad]) => {
+      const reservadas = reservasPorHora[hora] || 0;
+      const hayEspacio = capacidad > reservadas;
+      
+      // Solo marcar como pasado si es HOY y la hora ya pasó
+      let yaPaso = false;
+      if (esHoy && horaClienteStr) {
+        const [horaActual, minActual] = horaClienteStr.split(':').map(Number);
+        const [horaSlot, minSlot] = hora.split(':').map(Number);
+        
+        // Comparar directamente sin margen
+        if (horaSlot < horaActual) {
+          yaPaso = true;
+        } else if (horaSlot === horaActual && minSlot <= minActual) {
+          yaPaso = true;
+        }
       }
-    }), {
+
+      horarios[hora] = {
+        disponible: hayEspacio && !yaPaso,
+        completo: !hayEspacio,
+        pasado: yaPaso
+      };
+    });
+
+    console.log('=== Debug Availability ===');
+    console.log('Fecha seleccionada:', fecha);
+    console.log('Fecha cliente:', fechaClienteStr);
+    console.log('Hora cliente:', horaClienteStr);
+    console.log('Es hoy?:', esHoy);
+    console.log('Horarios:', horarios);
+
+    return new Response(JSON.stringify({ horarios }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
 
   } catch (error) {
-    console.error('Error en availability:', error);
-    return new Response(JSON.stringify({ 
-      error: 'Error al verificar disponibilidad',
-      details: error.message 
-    }), {
+    console.error('Error:', error);
+    return new Response(JSON.stringify({ error: 'Error al verificar disponibilidad' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });

@@ -169,7 +169,7 @@ import DefaultLayout from '../layouts/DefaultLayout.astro';
     const horaSelect = document.getElementById('hora');
     const debugInfo = document.getElementById('debugInfo');
     
-    // Establecer fecha mínima como hoy
+    // Establecer fecha mínima como hoy (en hora local del cliente)
     const today = new Date();
     const year = today.getFullYear();
     const month = (today.getMonth() + 1).toString().padStart(2, '0');
@@ -178,11 +178,18 @@ import DefaultLayout from '../layouts/DefaultLayout.astro';
     
     fechaInput.setAttribute('min', todayStr);
     
+    // Mostrar info de debug
+    debugInfo.innerHTML = `
+      <p>Hora actual de tu navegador: ${today.toLocaleString()}</p>
+      <p>Fecha mínima permitida: ${todayStr}</p>
+      <p>Zona horaria: ${Intl.DateTimeFormat().resolvedOptions().timeZone}</p>
+    `;
+    
     // Guardar los textos originales de las opciones
     const opcionesOriginales = {};
     Array.from(horaSelect.options).forEach(option => {
       if (option.value) {
-        opcionesOriginales[option.value] = option.textContent;
+        opcionesOriginales[option.value] = option.value;
       }
     });
     
@@ -192,28 +199,6 @@ import DefaultLayout from '../layouts/DefaultLayout.astro';
       const month = (date.getMonth() + 1).toString().padStart(2, '0');
       const day = date.getDate().toString().padStart(2, '0');
       return `${year}-${month}-${day}`;
-    }
-    
-    // Función para crear mensaje de debug más detallado
-    function updateDebugInfo(fecha, horarios) {
-      let debugHTML = `
-        <div style="background: #f3f4f6; padding: 10px; border-radius: 5px; margin: 10px 0; text-align: left;">
-          <h4>🔍 Debug Info:</h4>
-          <p><strong>Fecha seleccionada:</strong> ${fecha}</p>
-          <p><strong>Hora actual:</strong> ${new Date().toLocaleTimeString()}</p>
-          <p><strong>Horarios:</strong></p>
-          <ul style="margin: 5px 0; padding-left: 20px;">
-      `;
-      
-      Object.entries(horarios).forEach(([hora, info]) => {
-        const status = info.disponible ? '✅ Disponible' : 
-                      info.completo ? '❌ Completo' : 
-                      info.pasado ? '⏰ Pasado' : '❌ No disponible';
-        debugHTML += `<li><strong>${hora}:</strong> ${status} (${info.espaciosDisponibles}/${info.capacidadMaxima})</li>`;
-      });
-      
-      debugHTML += `</ul></div>`;
-      debugInfo.innerHTML = debugHTML;
     }
     
     // Verificar disponibilidad al cambiar fecha
@@ -228,7 +213,6 @@ import DefaultLayout from '../layouts/DefaultLayout.astro';
             option.classList.remove('text-gray-400');
           }
         });
-        debugInfo.innerHTML = `<p>Selecciona una fecha para ver disponibilidad</p>`;
         return;
       }
       
@@ -237,142 +221,55 @@ import DefaultLayout from '../layouts/DefaultLayout.astro';
       const horaCliente = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
       const fechaCliente = getFechaLocal(now);
       
-      console.log('=== FRONTEND DEBUG ===');
-      console.log('Fecha seleccionada:', fecha);
-      console.log('Fecha cliente:', fechaCliente);
+      console.log('=== Debug Cliente ===');
+      console.log('Fecha/hora actual navegador:', now.toString());
+      console.log('Fecha cliente formato:', fechaCliente);
       console.log('Hora cliente:', horaCliente);
-      console.log('Es hoy?:', fecha === fechaCliente);
+      console.log('Fecha seleccionada:', fecha);
+      console.log('¿Es hoy?:', fecha === fechaCliente);
       
       try {
         const response = await fetch(`/api/availability?fecha=${fecha}&horaCliente=${horaCliente}&fechaCliente=${fechaCliente}`);
-        
-        if (!response.ok) {
-          console.error('Error en respuesta:', response.status);
-          debugInfo.innerHTML = `<p style="color: red;">Error al consultar disponibilidad: ${response.status}</p>`;
-          return;
-        }
+        if (!response.ok) return;
         
         const data = await response.json();
         const horarios = data.horarios;
         
-        console.log('=== RESPUESTA COMPLETA ===');
-        console.log('Data completa:', data);
-        console.log('Horarios:', horarios);
-        
-        // Actualizar debug info
-        updateDebugInfo(fecha, horarios);
+        console.log('Respuesta disponibilidad:', horarios);
         
         // Actualizar opciones del select de hora
         let algunaDisponible = false;
-        let horasDisponibles = [];
-        let horasNoDisponibles = [];
-        
         Array.from(horaSelect.options).forEach(option => {
           if (option.value) {
             const horaInfo = horarios[option.value];
+            if (!horaInfo) return;
             
-            console.log(`=== PROCESANDO HORA ${option.value} ===`);
-            console.log('Info de hora:', horaInfo);
-            
-            if (!horaInfo) {
-              console.log('❌ No hay info para esta hora');
+            if (horaInfo.pasado || horaInfo.completo) {
               option.disabled = true;
-              option.textContent = `${opcionesOriginales[option.value]} - Sin info`;
+              option.textContent = opcionesOriginales[option.value];
               option.classList.add('text-gray-400');
-              horasNoDisponibles.push(option.value);
-              return;
-            }
-            
-            // AQUÍ ESTÁ LA LÓGICA CRÍTICA
-            console.log('¿Disponible?', horaInfo.disponible);
-            console.log('¿Completo?', horaInfo.completo);
-            console.log('¿Pasado?', horaInfo.pasado);
-            console.log('Espacios disponibles:', horaInfo.espaciosDisponibles);
-            
-            if (horaInfo.disponible === true) {
-              // Hora disponible
-              console.log('✅ Marcando como disponible');
+            } else {
               option.disabled = false;
-              option.textContent = `${opcionesOriginales[option.value]} (${horaInfo.espaciosDisponibles} disponibles)`;
+              option.textContent = opcionesOriginales[option.value];
               option.classList.remove('text-gray-400');
               algunaDisponible = true;
-              horasDisponibles.push(option.value);
-            } else {
-              // Hora NO disponible
-              console.log('❌ Marcando como NO disponible');
-              option.disabled = true;
-              
-              let razon = '';
-              if (horaInfo.pasado) {
-                razon = ' - Hora pasada';
-              } else if (horaInfo.completo) {
-                razon = ' - Completo';
-              } else {
-                razon = ' - No disponible';
-              }
-              
-              option.textContent = `${opcionesOriginales[option.value]}${razon}`;
-              option.classList.add('text-gray-400');
-              horasNoDisponibles.push(option.value);
-              
-              // Si la hora seleccionada ya no está disponible, limpiar selección
-              if (horaSelect.value === option.value) {
-                horaSelect.value = '';
-              }
             }
           }
         });
         
-        console.log('=== RESUMEN ===');
-        console.log('Horas disponibles:', horasDisponibles);
-        console.log('Horas NO disponibles:', horasNoDisponibles);
-        console.log('¿Alguna disponible?:', algunaDisponible);
-        
-        // Forzar actualización visual del select
-        horaSelect.style.display = 'none';
-        horaSelect.offsetHeight; // Trigger reflow
-        horaSelect.style.display = '';
-        
+        console.log('¿Hay alguna hora disponible?:', algunaDisponible);
       } catch (error) {
         console.error('Error verificando disponibilidad:', error);
-        debugInfo.innerHTML = `<p style="color: red;">Error de conexión: ${error.message}</p>`;
       }
     }
     
     // Verificar disponibilidad cuando cambie la fecha
-    fechaInput.addEventListener('change', () => {
-      console.log('📅 Fecha cambiada, verificando disponibilidad...');
-      checkAvailability();
-    });
+    fechaInput.addEventListener('change', checkAvailability);
     
-    // Botón manual para debug
-    const debugBtn = document.createElement('button');
-    debugBtn.textContent = '🔄 Verificar Disponibilidad';
-    debugBtn.type = 'button';
-    debugBtn.style.cssText = 'margin: 10px; padding: 5px 10px; background: #3b82f6; color: white; border: none; border-radius: 3px; cursor: pointer;';
-    debugBtn.addEventListener('click', checkAvailability);
-    debugInfo.appendChild(debugBtn);
-    
-    // Envío del formulario (simplificado para debug)
+    // Envío del formulario
     if (form) {
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        
-        const horaSeleccionada = horaSelect.value;
-        if (!horaSeleccionada) {
-          alert('Por favor selecciona un horario disponible.');
-          return;
-        }
-        
-        // Verificar que la hora seleccionada no esté deshabilitada
-        const optionSeleccionada = horaSelect.querySelector(`option[value="${horaSeleccionada}"]`);
-        if (optionSeleccionada && optionSeleccionada.disabled) {
-          alert('El horario seleccionado ya no está disponible. Por favor selecciona otro.');
-          await checkAvailability();
-          return;
-        }
-        
-        console.log('🚀 Enviando formulario...');
         
         submitBtn.disabled = true;
         submitBtn.textContent = 'Enviando...';
@@ -384,7 +281,7 @@ import DefaultLayout from '../layouts/DefaultLayout.astro';
           email: formData.get('email'),
           fecha: formData.get('fecha'),
           hora: formData.get('hora'),
-          personas: parseInt(formData.get('personas')),
+          personas: formData.get('personas'),
           comentarios: formData.get('comentarios') || null
         };
         
@@ -398,19 +295,26 @@ import DefaultLayout from '../layouts/DefaultLayout.astro';
           });
           
           if (response.ok) {
-            alert('¡Reserva recibida con éxito!');
+            alert('¡Reserva recibida con éxito! Te contactaremos para confirmar tu reserva.');
             form.reset();
-            checkAvailability(); // Actualizar disponibilidad después de crear reserva
+            // Limpiar estilos de las opciones
+            Array.from(horaSelect.options).forEach(option => {
+              if (option.value) {
+                option.disabled = false;
+                option.textContent = opcionesOriginales[option.value];
+                option.classList.remove('text-gray-400');
+              }
+            });
           } else {
             const errorData = await response.json();
-            console.error('Error del servidor:', errorData);
             
-            if (response.status === 409) {
-              alert(`Lo sentimos, solo quedan ${errorData.disponibles || 0} lugares disponibles para este horario.`);
+            if (response.status === 409 && errorData.disponibles !== undefined) {
+              alert(`Lo sentimos, solo quedan ${errorData.disponibles} lugares disponibles para este horario.`);
             } else {
               alert('El horario seleccionado no está disponible. Por favor, intenta con otro horario.');
             }
             
+            // Actualizar disponibilidad
             await checkAvailability();
           }
         } catch (error) {

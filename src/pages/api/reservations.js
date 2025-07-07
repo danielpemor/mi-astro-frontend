@@ -1,12 +1,18 @@
 export const prerender = false;
 
+/*─────────────────────────────────────────────
+  Configuración de Directus
+─────────────────────────────────────────────*/
 const DIRECTUS_URL =
-  process.env.DIRECTUS_URL ||    
-  process.env.PUBLIC_DIRECTUS_URL ||        
-  'http://localhost:8055';                  
+  process.env.DIRECTUS_URL ||               // producción (Netlify Functions)
+  process.env.PUBLIC_DIRECTUS_URL ||        // local si solo existe la pública
+  'http://localhost:8055';                  // fallback en dev
 
 const getHeaders = () => ({ 'Content-Type': 'application/json' });
 
+/*─────────────────────────────────────────────
+  Capacidad por defecto
+─────────────────────────────────────────────*/
 const CAPACIDAD_DEFAULT = {
   '10:00': 20, '10:30': 20, '11:00': 20, '11:30': 20,
   '12:00': 20, '12:30': 20, '13:00': 25, '13:30': 25,
@@ -14,10 +20,13 @@ const CAPACIDAD_DEFAULT = {
   '19:30': 25, '20:00': 30, '20:30': 30, '21:00': 25, '21:30': 20
 };
 
-
+/*─────────────────────────────────────────────
+  Helpers de configuración dinámica
+─────────────────────────────────────────────*/
 async function obtenerConfiguracionCapacidad(fecha) {
   const diaSemana = new Date(fecha).getDay().toString();
 
+  /* 1. Configuración específica por fecha */
   const urlFecha = `${DIRECTUS_URL}/items/configuracion_capacidad`
     + `?filter[fecha_especifica][_eq]=${fecha}&filter[activo][_eq]=true`
     + `&fields=capacidad_por_horario,descripcion&limit=1`;
@@ -30,6 +39,7 @@ async function obtenerConfiguracionCapacidad(fecha) {
     }
   }
 
+  /* 2. Configuración por día de semana */
   const urlDia = `${DIRECTUS_URL}/items/configuracion_capacidad`
     + `?filter[dia_semana][_eq]=${diaSemana}&filter[activo][_eq]=true`
     + `&filter[fecha_especifica][_null]=true&fields=capacidad_por_horario,descripcion&limit=1`;
@@ -42,6 +52,7 @@ async function obtenerConfiguracionCapacidad(fecha) {
     }
   }
 
+  /* 3. Default */
   return { capacidad: CAPACIDAD_DEFAULT, tipo: 'default', descripcion: 'Config estándar' };
 }
 
